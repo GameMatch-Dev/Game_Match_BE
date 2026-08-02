@@ -3,97 +3,86 @@ package com.hd.gamematch.game.application.service;
 import com.hd.gamematch.game.application.port.in.FindGamesQuery;
 import com.hd.gamematch.game.application.port.out.LoadGamesPort;
 import com.hd.gamematch.game.domain.Game;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
+@ExtendWith(MockitoExtension.class)
 class FindGamesServiceTest {
+
+    @Mock
+    private LoadGamesPort loadGamesPort;
+
+    @InjectMocks
+    private FindGamesService findGamesService;
+
+    private List<Game> games;
+
+    @BeforeEach
+    void setUp() {
+        games = List.of(
+                Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol")
+        );
+    }
 
     @Test
     void loadByNameAndSortWhenBothConditionsExist() {
-        RecordingLoadGamesPort loadGamesPort = new RecordingLoadGamesPort();
-        FindGamesService service = new FindGamesService(loadGamesPort);
+        given(loadGamesPort.loadGamesByNameAndSort("League", "MOBA"))
+                .willReturn(games);
 
-        List<Game> result = service.findGames(FindGamesQuery.of("League", "MOBA"));
+        List<Game> result = findGamesService.findGames(
+                FindGamesQuery.of("League", "MOBA")
+        );
 
-        assertSame(loadGamesPort.result, result);
-        assertEquals("nameAndSort", loadGamesPort.calledMethod);
-        assertEquals("League", loadGamesPort.name);
-        assertEquals("MOBA", loadGamesPort.sort);
+        assertSame(games, result);
+        then(loadGamesPort).should().loadGamesByNameAndSort("League", "MOBA");
     }
 
     @Test
     void loadByNameWhenOnlyNameExists() {
-        RecordingLoadGamesPort loadGamesPort = new RecordingLoadGamesPort();
-        FindGamesService service = new FindGamesService(loadGamesPort);
+        given(loadGamesPort.loadGamesByName("League"))
+                .willReturn(games);
 
-        List<Game> result = service.findGames(FindGamesQuery.of("League", null));
+        List<Game> result = findGamesService.findGames(
+                FindGamesQuery.of("League", null)
+        );
 
-        assertSame(loadGamesPort.result, result);
-        assertEquals("name", loadGamesPort.calledMethod);
-        assertEquals("League", loadGamesPort.name);
+        assertSame(games, result);
+        then(loadGamesPort).should().loadGamesByName("League");
     }
 
     @Test
     void loadBySortWhenOnlySortExists() {
-        RecordingLoadGamesPort loadGamesPort = new RecordingLoadGamesPort();
-        FindGamesService service = new FindGamesService(loadGamesPort);
+        given(loadGamesPort.loadGamesBySort("MOBA"))
+                .willReturn(games);
 
-        List<Game> result = service.findGames(FindGamesQuery.of(null, "MOBA"));
+        List<Game> result = findGamesService.findGames(
+                FindGamesQuery.of(null, "MOBA")
+        );
 
-        assertSame(loadGamesPort.result, result);
-        assertEquals("sort", loadGamesPort.calledMethod);
-        assertEquals("MOBA", loadGamesPort.sort);
+        assertSame(games, result);
+        then(loadGamesPort).should().loadGamesBySort("MOBA");
     }
 
     @Test
     void loadAllWhenNoConditionExists() {
-        RecordingLoadGamesPort loadGamesPort = new RecordingLoadGamesPort();
-        FindGamesService service = new FindGamesService(loadGamesPort);
+        given(loadGamesPort.loadAllGames())
+                .willReturn(games);
 
-        List<Game> result = service.findGames(FindGamesQuery.of(null, " "));
+        List<Game> result = findGamesService.findGames(
+                FindGamesQuery.of(null, " ")
+        );
 
-        assertSame(loadGamesPort.result, result);
-        assertEquals("all", loadGamesPort.calledMethod);
-    }
-
-    private static class RecordingLoadGamesPort implements LoadGamesPort {
-
-        private final List<Game> result = List.of(Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol"));
-
-        private String calledMethod;
-        private String name;
-        private String sort;
-
-        @Override
-        public List<Game> loadAllGames() {
-            calledMethod = "all";
-            return result;
-        }
-
-        @Override
-        public List<Game> loadGamesByNameAndSort(String name, String sort) {
-            calledMethod = "nameAndSort";
-            this.name = name;
-            this.sort = sort;
-            return result;
-        }
-
-        @Override
-        public List<Game> loadGamesByName(String name) {
-            calledMethod = "name";
-            this.name = name;
-            return result;
-        }
-
-        @Override
-        public List<Game> loadGamesBySort(String sort) {
-            calledMethod = "sort";
-            this.sort = sort;
-            return result;
-        }
+        assertSame(games, result);
+        then(loadGamesPort).should().loadAllGames();
     }
 }

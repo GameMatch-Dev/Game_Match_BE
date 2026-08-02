@@ -7,32 +7,45 @@ import com.hd.gamematch.game.application.port.in.FindGamesUseCase;
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.global.response.CommonResponse;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 
+@ExtendWith(MockitoExtension.class)
 class GameControllerTest {
 
+    @Mock
+    private FindGamesUseCase findGamesUseCase;
+
+    @Mock
+    private FindGameUseCase findGameUseCase;
+
+    @InjectMocks
+    private GameController gameController;
+
     @Test
-
-    //findGames 호출 시
-    //GameResponse 목록을 포함한
-    //CommonResponse가 반환된다.
     void findGamesReturnsCommonResponseWithGameResponses() {
-        RecordingFindGamesUseCase findGamesUseCase = new RecordingFindGamesUseCase();
-
-        RecordingFindGameUseCase findGameUseCase = new RecordingFindGameUseCase(
-                Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol")
+        Game game = Game.of(
+                1L,
+                "League of Legends",
+                "MOBA",
+                "https://example.com/lol"
         );
+        given(findGamesUseCase.findGames(any(FindGamesQuery.class)))
+                .willReturn(List.of(game));
 
-        GameController controller = new GameController(
-                findGamesUseCase,
-                findGameUseCase
-        );
-
-        CommonResponse<List<GameResponse>> response = controller.findGames(" League ", " MOBA ");
+        CommonResponse<List<GameResponse>> response =
+                gameController.findGames(" League ", " MOBA ");
 
         assertTrue(response.success());
         assertEquals("SUCCESS", response.code());
@@ -43,68 +56,37 @@ class GameControllerTest {
         assertEquals("MOBA", response.data().get(0).sort());
         assertEquals("https://example.com/lol", response.data().get(0).url());
 
-        assertEquals("League", findGamesUseCase.query.name());
-        assertEquals("MOBA", findGamesUseCase.query.sort());
+        ArgumentCaptor<FindGamesQuery> queryCaptor =
+                ArgumentCaptor.forClass(FindGamesQuery.class);
+        then(findGamesUseCase).should().findGames(queryCaptor.capture());
+        assertEquals("League", queryCaptor.getValue().name());
+        assertEquals("MOBA", queryCaptor.getValue().sort());
     }
 
-
     @Test
-    void 게임_id로_게임을_단건_조회하면_CommonResponse로_반환된다(){
-
-        //given
-        RecordingFindGamesUseCase findGamesUseCase = new RecordingFindGamesUseCase();
-
-        RecordingFindGameUseCase findGameUseCase = new RecordingFindGameUseCase(
-                Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol")
+    void findGameReturnsCommonResponseWithGameResponse() {
+        Game game = Game.of(
+                1L,
+                "League of Legends",
+                "MOBA",
+                "https://example.com/lol"
         );
+        given(findGameUseCase.findGame(any(FindGameQuery.class)))
+                .willReturn(game);
 
-        GameController controller = new GameController(
-                findGamesUseCase,
-                findGameUseCase
-        );
+        CommonResponse<GameResponse> response = gameController.findGame(1L);
 
-        // when
-        CommonResponse<GameResponse> response = controller.findGame(1L);
-
-
-        // then
         assertTrue(response.success());
         assertEquals("SUCCESS", response.code());
         assertEquals("요청에 성공했습니다.", response.message());
-
         assertEquals(1L, response.data().id());
         assertEquals("League of Legends", response.data().name());
         assertEquals("MOBA", response.data().sort());
         assertEquals("https://example.com/lol", response.data().url());
 
-        assertEquals(1L, findGameUseCase.gameId);
-
-    }
-
-    private static class RecordingFindGamesUseCase implements FindGamesUseCase {
-
-        private FindGamesQuery query;
-
-        @Override
-        public List<Game> findGames(FindGamesQuery query) {
-            this.query = query;
-            return List.of(Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol"));
-        }
-    }
-
-    private static class RecordingFindGameUseCase implements FindGameUseCase {
-
-        private final Game result;
-        private Long gameId;
-
-        private RecordingFindGameUseCase(Game result){
-            this.result = result;
-        }
-
-        @Override
-        public Game findGame(FindGameQuery query){
-            this.gameId = query.gameId();
-            return result;
-        }
+        ArgumentCaptor<FindGameQuery> queryCaptor =
+                ArgumentCaptor.forClass(FindGameQuery.class);
+        then(findGameUseCase).should().findGame(queryCaptor.capture());
+        assertEquals(1L, queryCaptor.getValue().gameId());
     }
 }
