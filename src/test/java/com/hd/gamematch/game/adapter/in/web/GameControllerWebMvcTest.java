@@ -57,6 +57,32 @@ class GameControllerWebMvcTest {
     }
 
     @Test
+    void findGameReturnsBadRequestResponseWhenGameIdIsMinusOne() throws Exception {
+        // FindGameQuery.of(-1L)에서 검증 예외가 먼저 발생하므로 유스케이스 Mock 설정은 필요 없다.
+        mockMvc.perform(get("/games/{gameId}", -1L)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.message").value("gameId는 1 이상이어야 합니다."))
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
+    void findGameReturnsBadRequestResponseWhenGameIdIsZero() throws Exception {
+        // 0은 허용 범위 바로 밖의 경계값이므로, 음수값과 별도로 같은 400 계약을 확인한다.
+        mockMvc.perform(get("/games/{gameId}", 0L)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.message").value("gameId는 1 이상이어야 합니다."))
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()));
+    }
+
+    @Test
     void findGameReturnsSuccessResponseWhenGameExists() throws Exception {
         // 새 404 처리가 기존의 정상 조회(200 OK) 결과를 바꾸지 않았는지 확인하는 회귀 테스트다.
         Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
