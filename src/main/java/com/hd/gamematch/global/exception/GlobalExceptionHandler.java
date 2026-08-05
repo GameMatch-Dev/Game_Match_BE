@@ -21,4 +21,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new CommonResponse<>(false, "GAME_NOT_FOUND", exception.getMessage(), null));
     }
+
+    // FindGameQuery 같은 입력 검증 코드에서 IllegalArgumentException이 발생하면 이 메서드가 처리한다.
+    // 예외에 담긴 구체적인 이유는 유지하고, HTTP 상태와 공통 오류 코드는 400 규칙으로 통일한다.
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<CommonResponse<Void>> handleIllegalArgumentException(
+            IllegalArgumentException exception
+    ) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new CommonResponse<>(false, "COMMON_400", exception.getMessage(), null));
+    }
 }

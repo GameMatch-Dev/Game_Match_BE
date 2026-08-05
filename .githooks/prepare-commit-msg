@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+# 현재 작업 브랜치에서 Jira 이슈 키(예: GM-11)를 찾아 커밋 제목에 넣는다.
+# 예: "feat: 400 응답 처리" -> "feat(GM-11): 400 응답 처리"
+
+commit_message_file="$1"
+branch_name="$(git symbolic-ref --quiet --short HEAD 2>/dev/null || true)"
+jira_key="$(printf '%s' "$branch_name" | grep -oE '[A-Z][A-Z0-9]+-[0-9]+' | head -n 1)"
+
+# detached HEAD이거나 Jira 키가 없는 브랜치에서는 기존 커밋 메시지를 건드리지 않는다.
+[ -z "$jira_key" ] && exit 0
+
+first_line="$(sed -n '1p' "$commit_message_file")"
+
+# 이미 키가 들어간 메시지, 병합 커밋 메시지, 빈 메시지는 그대로 둔다.
+printf '%s' "$first_line" | grep -q "$jira_key" && exit 0
+printf '%s' "$first_line" | grep -q '^Merge ' && exit 0
+[ -z "$first_line" ] && exit 0
+
+# Conventional Commit 형식이면 type 뒤에 Jira 키를 넣는다.
+# feat: 메시지       -> feat(GM-11): 메시지
+# fix!: 메시지       -> fix(GM-11)!: 메시지
+if printf '%s' "$first_line" | grep -qE '^[a-z]+!?(:|\([^)]*\)!?:)'; then
+  updated_line="$(printf '%s' "$first_line" | sed -E "s/^([a-z]+)(!?)(:|\\([^)]*\\)!?:)/\\1(${jira_key})\\2\\3/")"
+else
+  # Conventional Commit이 아니어도 Jira가 이력을 연결할 수 있도록 키를 앞에 붙인다.
+  updated_line="${jira_key}: ${first_line}"
+fi
+
+# 제목 첫 줄만 바꾸고, 본문과 Git이 추가한 안내 줄은 그대로 유지한다.
+{ printf '%s\n' "$updated_line"; sed '1d' "$commit_message_file"; } > "${commit_message_file}.tmp"
+mv "${commit_message_file}.tmp" "$commit_message_file"
