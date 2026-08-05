@@ -1,5 +1,11 @@
 # GameMatch Backend: Human-Led Multi-Agent Development
 
+## GitHub·Jira workflow reference
+
+Before creating or updating a Jira issue, creating/pushing a Git branch, opening/updating/merging a GitHub pull request, or deleting a merged branch, read [`docs/jira-github-workflow.md`](docs/jira-github-workflow.md). Treat it as the repository-specific source of truth for the Jira key, branch, commit, PR, automation, and cleanup workflow.
+
+Do not create a duplicate GitHub Issue for a Jira-managed task. Do not merge or delete a branch without explicit human approval, even when the workflow document describes the normal sequence.
+
 For every backend feature, act as the coordinator; do not silently do the entire task alone.
 
 1. Spawn `gamematch_backend_analyst` first and wait for its evidence.
