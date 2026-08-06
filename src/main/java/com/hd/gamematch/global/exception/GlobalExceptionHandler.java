@@ -5,11 +5,25 @@ import com.hd.gamematch.global.response.CommonResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 // 모든 컨트롤러에서 올라온 예외를 한곳에서 HTTP 응답으로 바꾸는 전역 처리기다.
 // @RestControllerAdvice는 처리 결과를 화면이 아닌 JSON 본문으로 작성하게 한다.
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<CommonResponse<Void>> handleMethodArgumentTypeMismatch(
+            MethodArgumentTypeMismatchException exception
+    ) {
+        return ResponseEntity.status(ErrorCode.COMMON_400.status())
+                .body(new CommonResponse<>(
+                        false,
+                        ErrorCode.COMMON_400.code(),
+                        ErrorCode.COMMON_400.defaultMessage(),
+                        null
+                ));
+    }
 
     // 서비스가 GameNotFoundException을 던졌을 때만 이 메서드를 골라 실행한다.
     // 그래서 컨트롤러마다 try-catch를 반복하지 않고도 같은 404 규칙을 적용할 수 있다.
