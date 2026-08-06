@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class FindGamesQueryTest {
 
@@ -27,5 +28,45 @@ class FindGamesQueryTest {
         assertFalse(query.hasSort());
         assertNull(query.name());
         assertNull(query.sort());
+    }
+
+    @Test
+    void rejectsNameLongerThanOneHundredCharactersAfterTrimming() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> FindGamesQuery.of(" " + "a".repeat(101) + " ", null)
+        );
+
+        assertEquals("name은 100자 이하여야 합니다.", exception.getMessage());
+    }
+
+    @Test
+    void rejectsNameContainingControlCharacter() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> FindGamesQuery.of("League\nof Legends", null)
+        );
+
+        assertEquals("name에는 제어문자를 포함할 수 없습니다.", exception.getMessage());
+    }
+
+    @Test
+    void rejectsSortLongerThanFiftyCharactersAfterTrimming() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> FindGamesQuery.of(null, " " + "a".repeat(51) + " ")
+        );
+
+        assertEquals("sort는 50자 이하여야 합니다.", exception.getMessage());
+    }
+
+    @Test
+    void validatesNameBeforeSortWhenBothValuesAreInvalid() {
+        IllegalArgumentException exception = assertThrows(
+                IllegalArgumentException.class,
+                () -> FindGamesQuery.of("a".repeat(101), "a".repeat(51))
+        );
+
+        assertEquals("name은 100자 이하여야 합니다.", exception.getMessage());
     }
 }

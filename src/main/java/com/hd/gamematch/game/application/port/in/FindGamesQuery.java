@@ -13,6 +13,9 @@ public record FindGamesQuery(String name, String sort) {
     public FindGamesQuery {
         name = normalize(name);
         sort = normalize(sort);
+
+        validateName(name);
+        validateSort(sort);
     }
 
     public static FindGamesQuery of(String name, String sort) {
@@ -32,6 +35,24 @@ public record FindGamesQuery(String name, String sort) {
             return null;
         }
         return value.trim();
+    }
+
+    private static void validateName(String name) {
+        if (name == null) {
+            return;
+        }
+        if (name.length() > 100) {
+            throw new IllegalArgumentException("name은 100자 이하여야 합니다.");
+        }
+        if (name.chars().anyMatch(Character::isISOControl)) {
+            throw new IllegalArgumentException("name에는 제어문자를 포함할 수 없습니다.");
+        }
+    }
+
+    private static void validateSort(String sort) {
+        if (sort != null && sort.length() > 50) {
+            throw new IllegalArgumentException("sort는 50자 이하여야 합니다.");
+        }
     }
 
 }

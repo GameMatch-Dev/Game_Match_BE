@@ -14,6 +14,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -115,6 +116,89 @@ class GameControllerWebMvcTest {
     }
 
     @Test
+    void findGamesTreatsBlankFiltersAsNotApplied() throws Exception {
+        given(findGamesUseCase.findGames(FindGamesQuery.of(null, null))).willReturn(java.util.List.of());
+
+        mockMvc.perform(get("/games")
+                        .param("name", " ")
+                        .param("sort", "\t")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.length()").value(0));
+
+        then(findGamesUseCase).should().findGames(FindGamesQuery.of(null, null));
+    }
+
+    @Test
+    void findGamesReturnsEmptySuccessResponseForUnknownSort() throws Exception {
+        given(findGamesUseCase.findGames(FindGamesQuery.of(null, "Unknown"))).willReturn(java.util.List.of());
+
+        mockMvc.perform(get("/games")
+                        .param("sort", "Unknown")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.length()").value(0));
+
+        then(findGamesUseCase).should().findGames(FindGamesQuery.of(null, "Unknown"));
+    }
+
+    @Test
+    void findGamesRejectsRepeatedNameParameter() throws Exception {
+        assertInvalidListRequest(
+                get("/games").param("name", "League", "Overwatch"),
+                "name 파라미터는 한 번만 지정할 수 있습니다."
+        );
+    }
+
+    @Test
+    void findGamesRejectsRepeatedSortParameter() throws Exception {
+        assertInvalidListRequest(
+                get("/games").param("sort", "MOBA", "FPS"),
+                "sort 파라미터는 한 번만 지정할 수 있습니다."
+        );
+    }
+
+    @Test
+    void findGamesPrioritizesRepeatedNameOverRepeatedSort() throws Exception {
+        assertInvalidListRequest(
+                get("/games")
+                        .param("name", "League", "Overwatch")
+                        .param("sort", "MOBA", "FPS"),
+                "name 파라미터는 한 번만 지정할 수 있습니다."
+        );
+    }
+
+    @Test
+    void findGamesRejectsNameLongerThanOneHundredCharacters() throws Exception {
+        assertInvalidListRequest(
+                get("/games").param("name", "a".repeat(101)),
+                "name은 100자 이하여야 합니다."
+        );
+    }
+
+    @Test
+    void findGamesRejectsNameContainingControlCharacter() throws Exception {
+        assertInvalidListRequest(
+                get("/games").param("name", "League\nof Legends"),
+                "name에는 제어문자를 포함할 수 없습니다."
+        );
+    }
+
+    @Test
+    void findGamesRejectsSortLongerThanFiftyCharacters() throws Exception {
+        assertInvalidListRequest(
+                get("/games").param("sort", "a".repeat(51)),
+                "sort는 50자 이하여야 합니다."
+        );
+    }
+
+    @Test
     void findGamesReturnsSuccessResponseWithoutFilters() throws Exception {
         Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
         given(findGamesUseCase.findGames(FindGamesQuery.of(null, null))).willReturn(java.util.List.of(game));
@@ -195,5 +279,17 @@ class GameControllerWebMvcTest {
                 .andExpect(jsonPath("$.data[0].url").value("https://example.com/overwatch2"));
 
         then(findGamesUseCase).should().findGames(FindGamesQuery.of("Overwatch 2", "FPS"));
+    }
+
+    private void assertInvalidListRequest(MockHttpServletRequestBuilder request, String message) throws Exception {
+        mockMvc.perform(request.accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.message").value(message))
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()));
+
+        then(findGamesUseCase).should(never()).findGames(any(FindGamesQuery.class));
     }
 }
