@@ -3,6 +3,7 @@ package com.hd.gamematch.game.adapter.in.web;
 import com.hd.gamematch.game.application.exception.GameNotFoundException;
 import com.hd.gamematch.game.application.port.in.FindGameQuery;
 import com.hd.gamematch.game.application.port.in.FindGameUseCase;
+import com.hd.gamematch.game.application.port.in.FindGamesQuery;
 import com.hd.gamematch.game.application.port.in.FindGamesUseCase;
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.global.exception.GlobalExceptionHandler;
@@ -15,6 +16,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -95,5 +97,88 @@ class GameControllerWebMvcTest {
                 .andExpect(jsonPath("$.code").value("SUCCESS"))
                 .andExpect(jsonPath("$.data.id").value(1))
                 .andExpect(jsonPath("$.data.name").value("League of Legends"));
+    }
+
+    @Test
+    void findGamesReturnsSuccessResponseWithoutFilters() throws Exception {
+        Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
+        given(findGamesUseCase.findGames(FindGamesQuery.of(null, null))).willReturn(java.util.List.of(game));
+
+        mockMvc.perform(get("/games").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.message").value("요청에 성공했습니다."))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].id").value(1))
+                .andExpect(jsonPath("$.data[0].name").value("League of Legends"))
+                .andExpect(jsonPath("$.data[0].sort").value("MOBA"))
+                .andExpect(jsonPath("$.data[0].url").value("https://example.com/lol"));
+
+        then(findGamesUseCase).should().findGames(FindGamesQuery.of(null, null));
+    }
+
+    @Test
+    void findGamesReturnsSuccessResponseWithNameFilter() throws Exception {
+        Game game = Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol");
+        given(findGamesUseCase.findGames(FindGamesQuery.of("League of Legends", null))).willReturn(java.util.List.of(game));
+
+        mockMvc.perform(get("/games").param("name", "League of Legends").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.message").value("요청에 성공했습니다."))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].id").value(2))
+                .andExpect(jsonPath("$.data[0].name").value("League of Legends"))
+                .andExpect(jsonPath("$.data[0].sort").value("MOBA"))
+                .andExpect(jsonPath("$.data[0].url").value("https://example.com/lol"));
+
+        then(findGamesUseCase).should().findGames(FindGamesQuery.of("League of Legends", null));
+    }
+
+    @Test
+    void findGamesReturnsSuccessResponseWithSortFilter() throws Exception {
+        Game game = Game.of(3L, "Hades", "Roguelike", "https://example.com/hades");
+        given(findGamesUseCase.findGames(FindGamesQuery.of(null, "Roguelike"))).willReturn(java.util.List.of(game));
+
+        mockMvc.perform(get("/games").param("sort", "Roguelike").accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.message").value("요청에 성공했습니다."))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].id").value(3))
+                .andExpect(jsonPath("$.data[0].name").value("Hades"))
+                .andExpect(jsonPath("$.data[0].sort").value("Roguelike"))
+                .andExpect(jsonPath("$.data[0].url").value("https://example.com/hades"));
+
+        then(findGamesUseCase).should().findGames(FindGamesQuery.of(null, "Roguelike"));
+    }
+
+    @Test
+    void findGamesReturnsSuccessResponseWithNameAndSortFilters() throws Exception {
+        Game game = Game.of(4L, "Overwatch 2", "FPS", "https://example.com/overwatch2");
+        given(findGamesUseCase.findGames(FindGamesQuery.of("Overwatch 2", "FPS"))).willReturn(java.util.List.of(game));
+
+        mockMvc.perform(get("/games")
+                        .param("name", "Overwatch 2")
+                        .param("sort", "FPS")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.message").value("요청에 성공했습니다."))
+                .andExpect(jsonPath("$.data.length()").value(1))
+                .andExpect(jsonPath("$.data[0].id").value(4))
+                .andExpect(jsonPath("$.data[0].name").value("Overwatch 2"))
+                .andExpect(jsonPath("$.data[0].sort").value("FPS"))
+                .andExpect(jsonPath("$.data[0].url").value("https://example.com/overwatch2"));
+
+        then(findGamesUseCase).should().findGames(FindGamesQuery.of("Overwatch 2", "FPS"));
     }
 }
