@@ -53,7 +53,7 @@ class GameControllerWebMvcTest {
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("GAME_NOT_FOUND"))
+                .andExpect(jsonPath("$.code").value("GAME_001"))
                 .andExpect(jsonPath("$.message").value("게임을 찾을 수 없습니다."))
                 .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()));
     }

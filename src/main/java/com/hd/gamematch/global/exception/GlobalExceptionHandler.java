@@ -19,7 +19,7 @@ public class GlobalExceptionHandler {
         // 업무 예외를 클라이언트와 약속한 HTTP 404 + 공통 JSON 응답으로 변환하는 경계다.
         // Void와 null은 이 실패 응답에는 돌려줄 게임 데이터가 없다는 뜻이다.
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new CommonResponse<>(false, "GAME_NOT_FOUND", exception.getMessage(), null));
+                .body(new CommonResponse<>(false, "GAME_001", exception.getMessage(), null));
     }
 
     // FindGameQuery 같은 입력 검증 코드에서 IllegalArgumentException이 발생하면 이 메서드가 처리한다.
