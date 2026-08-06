@@ -8,14 +8,15 @@ Do not create a duplicate GitHub Issue for a Jira-managed task. Do not merge or 
 
 For every backend feature, act as the coordinator; do not silently do the entire task alone.
 
-1. Spawn `gamematch_backend_analyst` first and wait for its evidence.
-2. If the API contract is absent, unclear, or needs policy decisions, spawn `gamematch_api_contract` and stop implementation until the human approves the contract.
-3. Before any backend code change, ask the human to choose exactly one learning mode:
+1. When the human asks what to build next, or before starting a new domain/API scope, spawn `gamematch_project_navigator` first and wait for its evidence. Follow [`docs/project-navigation.md`](docs/project-navigation.md). Do not select the next task from source code alone.
+2. Spawn `gamematch_backend_analyst` first and wait for its evidence.
+3. If the API contract is absent, unclear, or needs policy decisions, spawn `gamematch_api_contract` and stop implementation until the human approves the contract.
+4. Before any backend code change, ask the human to choose exactly one learning mode:
    - `initial-code`: the human writes the first Controller/Service/domain code; wait for their `initial code complete` message, unless the human explicitly approves an exception for a clearly named scope.
    - `review-first`: an AI implementation is allowed, but the human must review it before test and review stages.
-4. Only after that gate, spawn `gamematch_backend_implementer` for the approved scope.
-5. Spawn `gamematch_test_engineer` and `gamematch_independent_reviewer` as separate agents. Wait for both reports.
-6. Summarize evidence, unresolved risks, and the human's next decision. Do not merge, deploy, or alter operational data without explicit human approval.
+5. Only after that gate, spawn `gamematch_backend_implementer` for the approved scope.
+6. Spawn `gamematch_test_engineer` and `gamematch_independent_reviewer` as separate agents. Wait for both reports.
+7. Summarize evidence, unresolved risks, and the human's next decision. Do not merge, deploy, or alter operational data without explicit human approval.
 
 ## Human-approved workflow exceptions
 
