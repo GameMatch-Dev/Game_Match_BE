@@ -2,7 +2,6 @@ package com.hd.gamematch.global.exception;
 
 import com.hd.gamematch.game.application.exception.GameNotFoundException;
 import com.hd.gamematch.global.response.CommonResponse;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -18,8 +17,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<CommonResponse<Void>> handleGameNotFound(GameNotFoundException exception) {
         // 업무 예외를 클라이언트와 약속한 HTTP 404 + 공통 JSON 응답으로 변환하는 경계다.
         // Void와 null은 이 실패 응답에는 돌려줄 게임 데이터가 없다는 뜻이다.
-        return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new CommonResponse<>(false, "GAME_001", exception.getMessage(), null));
+        return ResponseEntity.status(ErrorCode.GAME_001.status())
+                .body(new CommonResponse<>(false, ErrorCode.GAME_001.code(), exception.getMessage(), null));
     }
 
     // FindGameQuery 같은 입력 검증 코드에서 IllegalArgumentException이 발생하면 이 메서드가 처리한다.
@@ -28,7 +27,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<CommonResponse<Void>> handleIllegalArgumentException(
             IllegalArgumentException exception
     ) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new CommonResponse<>(false, "COMMON_400", exception.getMessage(), null));
+        return ResponseEntity.status(ErrorCode.COMMON_400.status())
+                .body(new CommonResponse<>(false, ErrorCode.COMMON_400.code(), exception.getMessage(), null));
     }
 }
