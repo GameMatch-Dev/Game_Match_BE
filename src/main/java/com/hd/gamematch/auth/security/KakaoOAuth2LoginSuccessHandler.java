@@ -17,6 +17,7 @@ import java.net.URI;
 public class KakaoOAuth2LoginSuccessHandler implements AuthenticationSuccessHandler {
 
     private final AuthService authService;
+    private final KakaoOAuth2LoginFailureHandler kakaoOAuth2LoginFailureHandler;
 
     @Override
     public void onAuthenticationSuccess(
@@ -27,7 +28,11 @@ public class KakaoOAuth2LoginSuccessHandler implements AuthenticationSuccessHand
         OAuth2AuthenticationToken oauth2Authentication = (OAuth2AuthenticationToken) authentication;
         Object kakaoMemberId = oauth2Authentication.getPrincipal().getAttribute("id");
         if (kakaoMemberId == null) {
-            throw new IllegalStateException("카카오 회원번호를 받지 못했습니다.");
+            kakaoOAuth2LoginFailureHandler.redirectToFrontend(
+                    response,
+                    com.hd.gamematch.global.exception.ErrorCode.AUTH_PROVIDER_UNAVAILABLE
+            );
+            return;
         }
 
         URI frontendRedirectUri = authService.completeKakaoLogin(String.valueOf(kakaoMemberId));

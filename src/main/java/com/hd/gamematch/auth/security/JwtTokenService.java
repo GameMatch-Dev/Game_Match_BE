@@ -14,6 +14,9 @@ import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import jakarta.annotation.PostConstruct;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
@@ -25,6 +28,13 @@ import java.time.Instant;
 public class JwtTokenService {
 
     private final JwtProperties properties;
+
+    @PostConstruct
+    void validateSecret() {
+        if (!StringUtils.hasText(properties.secret())) {
+            throw new IllegalStateException("AUTH_JWT_SECRET 환경 변수가 설정되지 않았습니다.");
+        }
+    }
 
     public IssuedAccessToken issueAccessToken(Long userId) {
         Instant issuedAt = Instant.now();

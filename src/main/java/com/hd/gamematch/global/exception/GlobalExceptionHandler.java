@@ -1,6 +1,8 @@
 package com.hd.gamematch.global.exception;
 
 import com.hd.gamematch.game.application.exception.GameNotFoundException;
+import com.hd.gamematch.auth.application.exception.InvalidAuthRequestException;
+import com.hd.gamematch.auth.application.exception.InvalidLoginTicketException;
 import com.hd.gamematch.global.response.CommonResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -11,6 +13,16 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 // @RestControllerAdvice는 처리 결과를 화면이 아닌 JSON 본문으로 작성하게 한다.
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(InvalidAuthRequestException.class)
+    public ResponseEntity<CommonResponse<Void>> handleInvalidAuthRequest(InvalidAuthRequestException exception) {
+        return errorResponse(ErrorCode.AUTH_400);
+    }
+
+    @ExceptionHandler(InvalidLoginTicketException.class)
+    public ResponseEntity<CommonResponse<Void>> handleInvalidLoginTicket(InvalidLoginTicketException exception) {
+        return errorResponse(ErrorCode.AUTH_401);
+    }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<CommonResponse<Void>> handleMethodArgumentTypeMismatch(
@@ -43,5 +55,10 @@ public class GlobalExceptionHandler {
     ) {
         return ResponseEntity.status(ErrorCode.COMMON_400.status())
                 .body(new CommonResponse<>(false, ErrorCode.COMMON_400.code(), exception.getMessage(), null));
+    }
+
+    private ResponseEntity<CommonResponse<Void>> errorResponse(ErrorCode errorCode) {
+        return ResponseEntity.status(errorCode.status())
+                .body(new CommonResponse<>(false, errorCode.code(), errorCode.defaultMessage(), null));
     }
 }

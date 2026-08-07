@@ -1,6 +1,7 @@
 package com.hd.gamematch.auth.adapter.in.web;
 
 import com.hd.gamematch.auth.application.service.AuthService;
+import com.hd.gamematch.auth.application.exception.InvalidAuthRequestException;
 import com.hd.gamematch.auth.security.JwtTokenService;
 import com.hd.gamematch.global.response.CommonResponse;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
 
 @RestController
 @RequiredArgsConstructor
@@ -33,7 +35,10 @@ public class AuthController {
     }
 
     @PostMapping("/token")
-    public CommonResponse<TokenResponse> exchangeLoginTicket(@RequestBody LoginTicketRequest request) {
+    public CommonResponse<TokenResponse> exchangeLoginTicket(@RequestBody(required = false) LoginTicketRequest request) {
+        if (request == null || !StringUtils.hasText(request.ticket())) {
+            throw new InvalidAuthRequestException();
+        }
         JwtTokenService.IssuedAccessToken accessToken = authService.exchangeLoginTicket(request.ticket());
         return CommonResponse.success(new TokenResponse(
                 accessToken.value(),

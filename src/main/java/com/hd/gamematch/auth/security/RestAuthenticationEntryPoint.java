@@ -2,6 +2,7 @@ package com.hd.gamematch.auth.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hd.gamematch.global.response.CommonResponse;
+import com.hd.gamematch.global.exception.ErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,11 +25,16 @@ public class RestAuthenticationEntryPoint implements AuthenticationEntryPoint {
             HttpServletResponse response,
             AuthenticationException authenticationException
     ) throws IOException {
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setStatus(ErrorCode.AUTH_401.status().value());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         objectMapper.writeValue(
                 response.getOutputStream(),
-                new CommonResponse<>(false, "AUTH_401", "인증이 필요합니다.", null)
+                new CommonResponse<>(
+                        false,
+                        ErrorCode.AUTH_401.code(),
+                        ErrorCode.AUTH_401.defaultMessage(),
+                        null
+                )
         );
     }
 }
