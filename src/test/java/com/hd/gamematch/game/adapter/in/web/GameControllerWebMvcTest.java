@@ -10,6 +10,7 @@ import com.hd.gamematch.global.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -27,7 +28,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 // 웹 계층만 띄워서 URL 요청이 HTTP 상태와 JSON으로 어떻게 변환되는지 확인한다.
 // 서비스·DB 전체를 실행하는 통합 테스트보다 빠르고, 컨트롤러와 예외 처리기의 연결을 집중 검증한다.
-@WebMvcTest(GameController.class)
+@WebMvcTest(
+        value = GameController.class,
+        excludeAutoConfiguration = OAuth2ClientWebSecurityAutoConfiguration.class
+)
 @Import(GlobalExceptionHandler.class)
 class GameControllerWebMvcTest {
 

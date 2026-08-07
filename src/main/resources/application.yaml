@@ -1,3 +1,34 @@
 spring:
   application:
     name: GameMatch
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            # 실제 값은 로컬 .env 또는 배포 환경 변수로만 주입한다.
+            client-id: ${KAKAO_REST_API_KEY:}
+            client-secret: ${KAKAO_CLIENT_SECRET:}
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/auth/kakao/callback"
+            scope: profile_nickname
+            client-name: Kakao
+        provider:
+          kakao:
+            authorization-uri: https://kauth.kakao.com/oauth/authorize
+            token-uri: https://kauth.kakao.com/oauth/token
+            user-info-uri: https://kapi.kakao.com/v2/user/me
+            user-name-attribute: id
+
+auth:
+  login:
+    frontend-redirect-uri: ${FRONTEND_LOGIN_REDIRECT_URI:http://localhost:3000/login/callback}
+  cors:
+    # 여러 origin은 CORS_ALLOWED_ORIGINS에 쉼표로 구분해 설정한다. '*'은 허용하지 않는다.
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  jwt:
+    # 기본값이 없다. 운영·로컬 실행 모두 AUTH_JWT_SECRET을 명시해야 한다.
+    secret: ${AUTH_JWT_SECRET}
+    issuer: ${AUTH_JWT_ISSUER:gamematch}
+    access-token-ttl: PT15M
