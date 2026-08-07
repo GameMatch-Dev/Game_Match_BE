@@ -40,3 +40,8 @@ out/
 # Local tool state and credentials
 .local/
 
+# OAuth/JWT secrets are loaded from environment variables, never from Git.
+.env
+.env.*
+!.env.example
+
