@@ -1,0 +1,28 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          kakao:
+            # CI용 가짜 값이다. 실제 카카오 앱과 연결되지 않는다.
+            client-id: test-kakao-client-id
+            client-secret: test-kakao-client-secret
+            provider: kakao
+            client-authentication-method: client_secret_post
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/auth/kakao/callback"
+            scope: profile_nickname
+            client-name: Kakao
+        provider:
+          kakao:
+            authorization-uri: https://example.test/oauth/authorize
+            token-uri: https://example.test/oauth/token
+            user-info-uri: https://example.test/oauth/user
+            user-name-attribute: id
+
+auth:
+  cors:
+    allowed-origins: http://localhost:3000
+  jwt:
+    # 테스트 전용 키이며 운영/개발 환경에서는 절대 사용하지 않는다.
+    secret: test-only-jwt-secret-not-for-development-or-production
