@@ -14,13 +14,13 @@ public class RegisterGameUserService implements RegisterGameUserUseCase {
     private final SaveGameUserPort saveGameUserPort;
 
     @Override
-    public void register(RegisterGameUserCommand command) {
+    public Long register(RegisterGameUserCommand command) {
         GameUser gameUser = GameUser.create(
                 command.userId(),
                 command.gameId(),
                 command.nickname()
         );
 
-        saveGameUserPort.save(gameUser);
+        return saveGameUserPort.save(gameUser);
     }
 }

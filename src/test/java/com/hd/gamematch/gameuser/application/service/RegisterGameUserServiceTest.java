@@ -12,7 +12,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -36,11 +38,12 @@ class RegisterGameUserServiceTest {
                 10L,
                 "playerA"
         );
+        when(saveGameUserPort.save(any(GameUser.class))).thenReturn(100L);
 
         // When
         // Service가 저장을 요청할 외부 저장소 역할의 Port를 호출한다.
         // 이 테스트에서는 실제 DB 대신 Mock SaveGameUserPort를 사용한다.
-        registerGameUserService.register(command);
+        Long gameUserId = registerGameUserService.register(command);
 
         // Then
         // 1. save(...)가 호출됐는지 확인하고, 그때 전달된 GameUser를 Captor가 잡는다.
@@ -50,6 +53,7 @@ class RegisterGameUserServiceTest {
         assertThat(savedGameUser.getUserId()).isEqualTo(1L);
         assertThat(savedGameUser.getGameId()).isEqualTo(10L);
         assertThat(savedGameUser.getNickname()).isEqualTo("playerA");
+        assertThat(gameUserId).isEqualTo(100L);
 
     }
 }

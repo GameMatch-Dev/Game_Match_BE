@@ -4,5 +4,5 @@ import com.hd.gamematch.gameuser.domain.GameUser;
 
 public interface SaveGameUserPort {
 
-    void save(GameUser gameUser);
+    Long save(GameUser gameUser);
 }

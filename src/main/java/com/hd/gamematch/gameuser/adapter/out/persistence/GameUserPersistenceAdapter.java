@@ -13,13 +13,13 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort {
     private final GameUserJpaRepository gameUserJpaRepository;
 
     @Override
-    public void save(GameUser gameUser){
+    public Long save(GameUser gameUser){
         GameUserJpaEntity gameUserJpaEntity = GameUserJpaEntity.of(
                 gameUser.getUserId(),
                 gameUser.getGameId(),
                 gameUser.getNickname()
         );
 
-        gameUserJpaRepository.save(gameUserJpaEntity);
+        return gameUserJpaRepository.save(gameUserJpaEntity).getId();
     }
 }

@@ -24,12 +24,13 @@ class GameUserPersistenceAdapterIntegrationTest {
         GameUser gameUser = GameUser.create(1L, 10L, "playerA");
 
         // When
-        gameUserPersistenceAdapter.save(gameUser);
+        Long gameUserId = gameUserPersistenceAdapter.save(gameUser);
 
         // Then
         GameUserJpaEntity savedGameUser =
-                gameUserJpaRepository.findAll().get(0);
+                gameUserJpaRepository.findById(gameUserId).orElseThrow();
 
+        assertThat(gameUserId).isNotNull();
         assertThat(savedGameUser.getUserId()).isEqualTo(1L);
         assertThat(savedGameUser.getGameId()).isEqualTo(10L);
         assertThat(savedGameUser.getNickname()).isEqualTo("playerA");
