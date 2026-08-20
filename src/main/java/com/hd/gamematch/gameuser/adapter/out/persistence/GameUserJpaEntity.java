@@ -12,10 +12,16 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(
         name = "game_user",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_game_user_user_id_game_id",
-                columnNames = {"user_id", "game_id"}
-        )
+        uniqueConstraints = {
+                @UniqueConstraint(
+                        name = "uk_game_user_user_id_game_id",
+                        columnNames = {"user_id", "game_id"}
+                ),
+                @UniqueConstraint(
+                        name = "uk_game_user_game_id_nickname",
+                        columnNames = {"game_id", "nickname"}
+                )
+        }
 )
 public class GameUserJpaEntity {
 

@@ -1,8 +1,10 @@
 package com.hd.gamematch.gameuser.application.service;
 
 import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegisteredException;
+import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserCommand;
 import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserNicknamePort;
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.SaveGameUserPort;
 import com.hd.gamematch.gameuser.domain.GameUser;
@@ -17,17 +19,17 @@ public class RegisterGameUserService implements RegisterGameUserUseCase {
 
     private final ExistsGameUserPort existsGameUserPort;
 
+    private final ExistsGameUserNicknamePort existsGameUserNicknamePort;
+
     @Override
     public Long register(RegisterGameUserCommand command) {
 
-        // 같은 사용자가 같은 게임에 이미 등록했으면 새 프로필을 만들지 않는다.
-        if (existsGameUserPort.existsByUserIdAndGameId(
-                command.userId(),
-                command.gameId()
-        )) {
-            throw new GameUserAlreadyRegisteredException();
-        }
+        // 검사
+        validateNotAlreadyRegistered(command);
+        validateNicknameIsAvailable(command);
 
+
+        // 실제 register 시작
         GameUser gameUser = GameUser.create(
                 command.userId(),
                 command.gameId(),
@@ -35,5 +37,27 @@ public class RegisterGameUserService implements RegisterGameUserUseCase {
         );
 
         return saveGameUserPort.save(gameUser);
+    }
+
+    private void validateNotAlreadyRegistered(
+            RegisterGameUserCommand command
+    ) {
+        if (existsGameUserPort.existsByUserIdAndGameId(
+                command.userId(),
+                command.gameId()
+        )) {
+            throw new GameUserAlreadyRegisteredException();
+        }
+    }
+
+    private void validateNicknameIsAvailable(
+            RegisterGameUserCommand command
+    ) {
+        if (existsGameUserNicknamePort.existsByGameIdAndNickname(
+                command.gameId(),
+                command.nickname()
+        )) {
+            throw new GameUserNicknameAlreadyInUseException();
+        }
     }
 }

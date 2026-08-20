@@ -1,7 +1,9 @@
 package com.hd.gamematch.gameuser.application.service;
 
+import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserCommand;
 import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegisteredException;
+import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserNicknamePort;
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.SaveGameUserPort;
 import com.hd.gamematch.gameuser.domain.GameUser;
@@ -36,6 +38,9 @@ class RegisterGameUserServiceTest {
 
     @Captor
     private ArgumentCaptor<GameUser> gameUserCaptor;
+
+    @Mock
+    private ExistsGameUserNicknamePort existsGameUserNicknamePort;
 
     @Test
     void registerGameUser() {
@@ -79,6 +84,32 @@ class RegisterGameUserServiceTest {
         // When & Then: 중복 등록은 거부하고 저장을 요청하지 않는다.
         assertThatThrownBy(() -> registerGameUserService.register(command))
                 .isInstanceOf(GameUserAlreadyRegisteredException.class);
+
+        verifyNoInteractions(saveGameUserPort);
+    }
+
+    @Test
+    void registerGameUserRejectsWhenNicknameIsAlreadyUsedForGame() {
+        // Given: 다른 사용자가 같은 게임에서 이미 playerA 닉네임을 사용 중이다.
+        RegisterGameUserCommand command = new RegisterGameUserCommand(
+                2L,
+                10L,
+                "playerA"
+        );
+
+        // 검사용 포트 -> 다른 사용자가 playerA를 등록을 시도할 때 이미 존재한다고 알린다고 응답을 설정
+        when(existsGameUserNicknamePort.existsByGameIdAndNickname(
+                10L,
+                "playerA"
+        )).thenReturn(true);
+
+        // When & Then: 새 프로필을 저장하지 않고 닉네임 중복 예외를 던진다.
+        // 즉 테스트 내용은
+        // 이미 사용 중이라고 들었을 때
+        // -> Service가 예외를 던지는가?
+        // -> 저장을 시도하지 않는가?
+        assertThatThrownBy(() -> registerGameUserService.register(command))
+                .isInstanceOf(GameUserNicknameAlreadyInUseException.class);
 
         verifyNoInteractions(saveGameUserPort);
     }

@@ -6,6 +6,11 @@ import org.springframework.http.HttpStatus;
 public enum ErrorCode {
     COMMON_400(HttpStatus.BAD_REQUEST, "COMMON_400", "잘못된 요청입니다."),
     GAME_001(HttpStatus.NOT_FOUND, "GAME_001", "게임을 찾을 수 없습니다."),
+    GAME_USER_002(
+            HttpStatus.BAD_REQUEST,
+            "GAME_USER_002",
+            "이미 해당 게임에서 사용 중인 닉네임입니다."
+    ),
     GAME_USER_003(
             HttpStatus.CONFLICT,
             "GAME_USER_003",

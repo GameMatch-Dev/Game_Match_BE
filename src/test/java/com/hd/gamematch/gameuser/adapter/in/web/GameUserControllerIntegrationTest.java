@@ -129,4 +129,59 @@ class GameUserControllerIntegrationTest {
         // 새 프로필이 추가 생성되지 않았는지도 확인한다.
         assertThat(gameUserJpaRepository.count()).isEqualTo(1);
     }
+
+    // 서로 다른 사용자라도 같은 게임에서 이미 사용 중인 닉네임으로 등록할 수 없다.
+    @Test
+    void registerGameUserRejectsDuplicateNicknameForSameGame() throws Exception {
+        // Given: 서로 다른 인증 사용자 두 명과 같은 게임을 준비한다.
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+
+        GameJpaEntity savedGame = gameJpaRepository.save(
+                GameJpaEntity.of(
+                        "League of Legends",
+                        "MOBA",
+                        "https://example.com/lol"
+                )
+        );
+
+        String firstUserAccessToken = jwtTokenService
+                .issueAccessToken(firstUser.getId())
+                .value();
+
+        String secondUserAccessToken = jwtTokenService
+                .issueAccessToken(secondUser.getId())
+                .value();
+
+        String requestBody = """
+            {
+              "gameId": %d,
+              "nickname": "playerA"
+            }
+            """.formatted(savedGame.getId());
+
+        // 첫 사용자는 해당 닉네임으로 정상 등록한다.
+        mockMvc.perform(post("/game-users")
+                        .header("Authorization", "Bearer " + firstUserAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isCreated());
+
+        // When & Then: 다른 사용자라도 같은 게임에서 같은 닉네임은 사용할 수 없다.
+        mockMvc.perform(post("/game-users")
+                        .header("Authorization", "Bearer " + secondUserAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(requestBody))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("GAME_USER_002"))
+                .andExpect(jsonPath("$.message")
+                        .value("이미 해당 게임에서 사용 중인 닉네임입니다."))
+                .andExpect(jsonPath("$.data").value(org.hamcrest.Matchers.nullValue()));
+
+        // 닉네임 중복 요청 때문에 두 번째 프로필은 저장되지 않아야 한다.
+        assertThat(gameUserJpaRepository.count()).isEqualTo(1);
+    }
 }

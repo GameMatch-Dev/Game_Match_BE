@@ -6,4 +6,6 @@ public interface GameUserJpaRepository
         extends JpaRepository<GameUserJpaEntity, Long> {
 
     boolean existsByUserIdAndGameId(Long userId, Long gameId);
+
+    boolean existsByGameIdAndNickname(Long gameId, String nickname);
 }

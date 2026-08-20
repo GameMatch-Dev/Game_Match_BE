@@ -1,6 +1,7 @@
 package com.hd.gamematch.gameuser.adapter.out.persistence;
 
 import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegisteredException;
+import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.gameuser.domain.GameUser;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,6 +88,22 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
+    void saveConvertsDuplicateNicknameConstraintViolationToNicknameAlreadyInUseException() {
+        // Given: 첫 사용자가 게임 10에서 playerA 닉네임을 이미 사용 중이다.
+        gameUserPersistenceAdapter.save(
+                GameUser.create(1L, 10L, "playerA")
+        );
+
+        // When & Then: 다른 사용자가 같은 게임에서 같은 닉네임을 저장하면
+        // DB 제약 위반을 닉네임 중복 업무 예외로 변환한다.
+        assertThatThrownBy(() ->
+                gameUserPersistenceAdapter.save(
+                        GameUser.create(2L, 10L, "playerA")
+                )
+        ).isInstanceOf(GameUserNicknameAlreadyInUseException.class);
+    }
+
+    @Test
     void saveDoesNotConvertOtherIntegrityViolationsToDuplicateRegistrationException() {
         // Given: nickname은 DB에서 NULL을 허용하지 않는 별도의 무결성 규칙이다.
         GameUser gameUserWithMissingNickname = GameUser.create(1L, 10L, null);
@@ -97,5 +114,37 @@ class GameUserPersistenceAdapterIntegrationTest {
         )
                 .isInstanceOf(DataIntegrityViolationException.class)
                 .isNotInstanceOf(GameUserAlreadyRegisteredException.class);
+    }
+
+    @Test
+    void existsReturnsTrueWhenSameGameNicknameExists() {
+        // Given: 특정 게임에서 playerA 닉네임을 사용하는 프로필이 이미 있다.
+        gameUserPersistenceAdapter.save(
+                GameUser.create(1L, 10L, "playerA")
+        );
+
+        // When: 같은 게임과 닉네임 조합의 존재 여부를 확인한다.
+        boolean exists = gameUserPersistenceAdapter
+                .existsByGameIdAndNickname(10L, "playerA");
+
+        // Then
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    void databaseRejectsDuplicateNicknameForSameGame() {
+        // Given: 첫 사용자가 게임 10에서 playerA 닉네임을 사용 중이다.
+        gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(1L, 10L, "playerA")
+        );
+
+        // 사용자 ID는 다르지만, 게임과 닉네임은 같다.
+        GameUserJpaEntity duplicateNicknameGameUser =
+                GameUserJpaEntity.of(2L, 10L, "playerA");
+
+        // When & Then: 같은 게임에서는 같은 닉네임을 DB가 거부해야 한다.
+        assertThatThrownBy(() ->
+                gameUserJpaRepository.saveAndFlush(duplicateNicknameGameUser)
+        ).isInstanceOf(DataIntegrityViolationException.class);
     }
 }

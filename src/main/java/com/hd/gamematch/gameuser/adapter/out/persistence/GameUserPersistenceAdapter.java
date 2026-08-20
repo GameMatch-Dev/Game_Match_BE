@@ -1,6 +1,8 @@
 package com.hd.gamematch.gameuser.adapter.out.persistence;
 
 import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegisteredException;
+import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
+import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserNicknamePort;
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.SaveGameUserPort;
 import com.hd.gamematch.gameuser.domain.GameUser;
@@ -14,7 +16,12 @@ import java.util.Locale;
 
 @Component
 @RequiredArgsConstructor
-public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameUserPort {
+public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameUserPort, ExistsGameUserNicknamePort {
+
+    private static final String DUPLICATE_REGISTRATION_CONSTRAINT =
+            "uk_game_user_user_id_game_id";
+    private static final String DUPLICATE_NICKNAME_CONSTRAINT =
+            "uk_game_user_game_id_nickname";
 
     private final GameUserJpaRepository gameUserJpaRepository;
 
@@ -32,8 +39,11 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
             return gameUserJpaRepository.save(gameUserJpaEntity).getId();
         } catch (DataIntegrityViolationException exception) {
             // 등록 중복을 보장하는 유니크 제약 위반만 업무 예외로 바꾼다.
-            if (isDuplicateRegistrationConstraintViolation(exception)) {
+            if (hasConstraintViolation(exception, DUPLICATE_REGISTRATION_CONSTRAINT)) {
                 throw new GameUserAlreadyRegisteredException(exception);
+            }
+            if (hasConstraintViolation(exception, DUPLICATE_NICKNAME_CONSTRAINT)) {
+                throw new GameUserNicknameAlreadyInUseException();
             }
             throw exception;
         }
@@ -44,8 +54,9 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
         return gameUserJpaRepository.existsByUserIdAndGameId(userId, gameId);
     }
 
-    private boolean isDuplicateRegistrationConstraintViolation(
-            DataIntegrityViolationException exception
+    private boolean hasConstraintViolation(
+            DataIntegrityViolationException exception,
+            String expectedConstraintName
     ) {
         Throwable cause = exception;
 
@@ -56,12 +67,20 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
                 // H2는 schema 이름과 내부 index 접미사를 붙일 수 있다.
                 return constraintName != null
                         && constraintName.toLowerCase(Locale.ROOT)
-                        .contains("uk_game_user_user_id_game_id");
+                        .contains(expectedConstraintName);
             }
 
             cause = cause.getCause();
         }
 
         return false;
+    }
+
+    @Override
+    public boolean existsByGameIdAndNickname(Long gameId, String nickname) {
+        return gameUserJpaRepository.existsByGameIdAndNickname(
+                gameId,
+                nickname
+        );
     }
 }
