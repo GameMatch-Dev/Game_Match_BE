@@ -1,6 +1,8 @@
 package com.hd.gamematch.gameuser.application.service;
 
 import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserCommand;
+import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegisteredException;
+import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.SaveGameUserPort;
 import com.hd.gamematch.gameuser.domain.GameUser;
 import org.junit.jupiter.api.Test;
@@ -15,6 +17,8 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 
 @ExtendWith(MockitoExtension.class)
@@ -23,6 +27,9 @@ class RegisterGameUserServiceTest {
     // 실제 DB 저장 여부는 다음 단계의 JPA 통합 테스트가 검사한다.
     @Mock
     private SaveGameUserPort saveGameUserPort;
+
+    @Mock
+    private ExistsGameUserPort existsGameUserPort;
 
     @InjectMocks
     private RegisterGameUserService registerGameUserService;
@@ -55,5 +62,24 @@ class RegisterGameUserServiceTest {
         assertThat(savedGameUser.getNickname()).isEqualTo("playerA");
         assertThat(gameUserId).isEqualTo(100L);
 
+    }
+
+    @Test
+    void registerGameUserRejectsWhenUserAlreadyRegisteredForGame() {
+        // Given: 이미 같은 게임에 등록된 사용자라고 가정한다.
+        RegisterGameUserCommand command = new RegisterGameUserCommand(
+                1L,
+                10L,
+                "playerA"
+        );
+
+        when(existsGameUserPort.existsByUserIdAndGameId(1L, 10L))
+                .thenReturn(true);
+
+        // When & Then: 중복 등록은 거부하고 저장을 요청하지 않는다.
+        assertThatThrownBy(() -> registerGameUserService.register(command))
+                .isInstanceOf(GameUserAlreadyRegisteredException.class);
+
+        verifyNoInteractions(saveGameUserPort);
     }
 }

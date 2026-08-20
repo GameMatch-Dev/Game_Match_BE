@@ -10,7 +10,13 @@ import lombok.NoArgsConstructor;
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-@Table(name = "game_user")
+@Table(
+        name = "game_user",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uk_game_user_user_id_game_id",
+                columnNames = {"user_id", "game_id"}
+        )
+)
 public class GameUserJpaEntity {
 
     @Id
