@@ -1,4 +1,10 @@
 spring:
+  jpa:
+    hibernate:
+      # 테스트도 Flyway가 만든 H2 스키마를 검증한다.
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/test-migration
   security:
     oauth2:
       client:
