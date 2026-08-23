@@ -1,6 +1,12 @@
 spring:
   application:
     name: GameMatch
+  jpa:
+    hibernate:
+      # 운영 스키마 생성은 Flyway migration이 담당하고, Hibernate는 매핑만 검증한다.
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/migration
   security:
     oauth2:
       client:

@@ -1,4 +1,10 @@
 spring:
+  jpa:
+    hibernate:
+      # 테스트도 Flyway가 만든 H2 스키마를 검증한다.
+      ddl-auto: validate
+  flyway:
+    locations: classpath:db/test-migration
   security:
     oauth2:
       client:
@@ -26,3 +32,5 @@ auth:
   jwt:
     # 테스트 전용 키이며 운영/개발 환경에서는 절대 사용하지 않는다.
     secret: test-only-jwt-secret-not-for-development-or-production
+    issuer: gamematch
+    access-token-ttl: PT15M

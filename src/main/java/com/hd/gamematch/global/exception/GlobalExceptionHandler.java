@@ -3,6 +3,8 @@ package com.hd.gamematch.global.exception;
 import com.hd.gamematch.game.application.exception.GameNotFoundException;
 import com.hd.gamematch.auth.application.exception.InvalidAuthRequestException;
 import com.hd.gamematch.auth.application.exception.InvalidLoginTicketException;
+import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegisteredException;
+import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.global.response.CommonResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -60,5 +62,20 @@ public class GlobalExceptionHandler {
     private ResponseEntity<CommonResponse<Void>> errorResponse(ErrorCode errorCode) {
         return ResponseEntity.status(errorCode.status())
                 .body(new CommonResponse<>(false, errorCode.code(), errorCode.defaultMessage(), null));
+    }
+
+
+    @ExceptionHandler(GameUserAlreadyRegisteredException.class)
+    public ResponseEntity<CommonResponse<Void>> handleGameUserAlreadyRegistered(
+            GameUserAlreadyRegisteredException exception
+    ) {
+        return errorResponse(ErrorCode.GAME_USER_003);
+    }
+
+    @ExceptionHandler(GameUserNicknameAlreadyInUseException.class)
+    public ResponseEntity<CommonResponse<Void>> handleGameUserNicknameAlreadyInUse(
+            GameUserNicknameAlreadyInUseException exception
+    ) {
+        return errorResponse(ErrorCode.GAME_USER_002);
     }
 }
