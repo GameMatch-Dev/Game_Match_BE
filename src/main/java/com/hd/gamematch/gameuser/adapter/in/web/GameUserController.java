@@ -5,12 +5,17 @@ import com.hd.gamematch.game.application.port.in.FindGameUseCase;
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserCommand;
 import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.FindGameUserQuery;
+import com.hd.gamematch.gameuser.application.port.in.FindGameUserUseCase;
+import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.global.response.CommonResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -29,6 +34,20 @@ public class GameUserController {
     private final FindGameUseCase findGameUseCase;
 
     private final RegisterGameUserUseCase registerGameUserUseCase;
+
+    private final FindGameUserUseCase findGameUserUseCase;
+
+    @GetMapping("/{gameUserId}")
+    public ResponseEntity<CommonResponse<FindGameUserResponse>> getGameUserProfile(
+            @PathVariable Long gameUserId
+    ) {
+        GameUserProfile gameUserProfile = findGameUserUseCase.findGameUser(
+                FindGameUserQuery.of(gameUserId)
+        );
+
+        return ResponseEntity.ok(CommonResponse.success(FindGameUserResponse.from(gameUserProfile)));
+    }
+
     @PostMapping
     public ResponseEntity<CommonResponse<RegisterGameUserResponse>> postUserProfile(
             @RequestBody RegisterGameUserRequest request,
