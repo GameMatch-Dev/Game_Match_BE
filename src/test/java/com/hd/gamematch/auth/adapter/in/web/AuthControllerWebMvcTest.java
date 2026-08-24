@@ -2,6 +2,7 @@ package com.hd.gamematch.auth.adapter.in.web;
 
 import com.hd.gamematch.auth.application.exception.InvalidLoginTicketException;
 import com.hd.gamematch.auth.application.service.AuthService;
+import com.hd.gamematch.auth.adapter.in.web.exception.AuthExceptionHandler;
 import com.hd.gamematch.auth.security.JwtTokenService;
 import com.hd.gamematch.global.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +26,7 @@ class AuthControllerWebMvcTest {
     void setUp() {
         authService = org.mockito.Mockito.mock(AuthService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(new AuthController(authService))
-                .setControllerAdvice(new GlobalExceptionHandler())
+                .setControllerAdvice(new GlobalExceptionHandler(), new AuthExceptionHandler())
                 .build();
     }
 
