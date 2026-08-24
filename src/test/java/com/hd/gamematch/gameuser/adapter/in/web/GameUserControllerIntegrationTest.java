@@ -5,6 +5,7 @@ import com.hd.gamematch.auth.adapter.out.persistence.UserJpaRepository;
 import com.hd.gamematch.auth.security.JwtTokenService;
 import com.hd.gamematch.game.adapter.out.persistence.GameJpaEntity;
 import com.hd.gamematch.game.adapter.out.persistence.GameJpaRepository;
+import com.hd.gamematch.gameuser.adapter.out.persistence.GameUserJpaEntity;
 import com.hd.gamematch.gameuser.adapter.out.persistence.GameUserJpaRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,6 +16,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -183,5 +185,49 @@ class GameUserControllerIntegrationTest {
 
         // 닉네임 중복 요청 때문에 두 번째 프로필은 저장되지 않아야 한다.
         assertThat(gameUserJpaRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void 게임_프로필을_공개적으로_단건_조회한다() throws Exception {
+        // Given: 조회할 사용자, 게임, 게임 프로필을 테스트 DB에 준비한다.
+        UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
+
+        GameJpaEntity savedGame = gameJpaRepository.save(
+                GameJpaEntity.of(
+                        "League of Legends",
+                        "MOBA",
+                        "https://example.com/lol"
+                )
+        );
+
+        GameUserJpaEntity savedGameUser = gameUserJpaRepository.save(
+                GameUserJpaEntity.of(
+                        savedUser.getId(),
+                        savedGame.getId(),
+                        "playerA"
+                )
+        );
+
+        // When & Then: 인증 없이도 약속한 최소 공개 프로필을 조회할 수 있다.
+        mockMvc.perform(get("/game-users/{gameUserId}", savedGameUser.getId())
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.message").value("요청에 성공했습니다."))
+                .andExpect(jsonPath("$.data.id").value(savedGameUser.getId()))
+                .andExpect(jsonPath("$.data.nickname").value("playerA"))
+                .andExpect(jsonPath("$.data.game.id").value(savedGame.getId()))
+                .andExpect(jsonPath("$.data.game.name").value("League of Legends"))
+                .andExpect(jsonPath("$.data.game.sort").value("MOBA"))
+                .andExpect(jsonPath("$.data.game.url").value("https://example.com/lol"))
+                .andExpect(jsonPath("$.data.user.id").value(savedUser.getId()));
+    }
+
+    @Test
+    void 음수_게임_프로필_ID로_조회하면_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/{gameUserId}", -1)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
     }
 }
