@@ -223,4 +223,11 @@ class GameUserControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.game.url").value("https://example.com/lol"))
                 .andExpect(jsonPath("$.data.user.id").value(savedUser.getId()));
     }
+
+    @Test
+    void 음수_게임_프로필_ID로_조회하면_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/{gameUserId}", -1)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest());
+    }
 }
