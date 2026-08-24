@@ -1,6 +1,7 @@
 package com.hd.gamematch.game.adapter.in.web;
 
 import com.hd.gamematch.game.application.exception.GameNotFoundException;
+import com.hd.gamematch.game.adapter.in.web.exception.GameExceptionHandler;
 import com.hd.gamematch.game.application.port.in.FindGameQuery;
 import com.hd.gamematch.game.application.port.in.FindGameUseCase;
 import com.hd.gamematch.game.application.port.in.FindGamesQuery;
@@ -32,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         value = GameController.class,
         excludeAutoConfiguration = OAuth2ClientWebSecurityAutoConfiguration.class
 )
-@Import(GlobalExceptionHandler.class)
+@Import({GlobalExceptionHandler.class, GameExceptionHandler.class})
 class GameControllerWebMvcTest {
 
     // 실제 웹 요청처럼 GET을 보내고, 응답 상태·헤더·JSON 필드를 검사하는 도구다.

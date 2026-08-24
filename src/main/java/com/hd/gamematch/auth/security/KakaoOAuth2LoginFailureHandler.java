@@ -2,6 +2,7 @@ package com.hd.gamematch.auth.security;
 
 import com.hd.gamematch.auth.config.AuthLoginProperties;
 import com.hd.gamematch.global.exception.ErrorCode;
+import com.hd.gamematch.global.exception.code.AuthErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
@@ -42,21 +43,21 @@ public class KakaoOAuth2LoginFailureHandler implements AuthenticationFailureHand
 
     private ErrorCode classify(AuthenticationException exception) {
         if (hasProviderUnavailableCause(exception)) {
-            return ErrorCode.AUTH_PROVIDER_UNAVAILABLE;
+            return AuthErrorCode.AUTH_PROVIDER_UNAVAILABLE;
         }
         if (exception instanceof OAuth2AuthenticationException oauth2Exception) {
             String errorCode = oauth2Exception.getError().getErrorCode();
             if ("invalid_request".equals(errorCode)) {
-                return ErrorCode.AUTH_400;
+                return AuthErrorCode.AUTH_400;
             }
             if ("invalid_token_response".equals(errorCode)
                     || "server_error".equals(errorCode)
                     || "temporarily_unavailable".equals(errorCode)) {
-                return ErrorCode.AUTH_PROVIDER_UNAVAILABLE;
+                return AuthErrorCode.AUTH_PROVIDER_UNAVAILABLE;
             }
         }
         // state 불일치, 사용자 취소, 만료·재사용된 인가 코드는 모두 로그인 실패로만 안내한다.
-        return ErrorCode.AUTH_401;
+        return AuthErrorCode.AUTH_401;
     }
 
     private boolean hasProviderUnavailableCause(Throwable throwable) {

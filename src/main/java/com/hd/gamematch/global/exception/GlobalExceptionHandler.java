@@ -1,10 +1,6 @@
 package com.hd.gamematch.global.exception;
 
-import com.hd.gamematch.game.application.exception.GameNotFoundException;
-import com.hd.gamematch.auth.application.exception.InvalidAuthRequestException;
-import com.hd.gamematch.auth.application.exception.InvalidLoginTicketException;
-import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegisteredException;
-import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
+import com.hd.gamematch.global.exception.code.CommonErrorCode;
 import com.hd.gamematch.global.response.CommonResponse;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -16,37 +12,17 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(InvalidAuthRequestException.class)
-    public ResponseEntity<CommonResponse<Void>> handleInvalidAuthRequest(InvalidAuthRequestException exception) {
-        return errorResponse(ErrorCode.AUTH_400);
-    }
-
-    @ExceptionHandler(InvalidLoginTicketException.class)
-    public ResponseEntity<CommonResponse<Void>> handleInvalidLoginTicket(InvalidLoginTicketException exception) {
-        return errorResponse(ErrorCode.AUTH_401);
-    }
-
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<CommonResponse<Void>> handleMethodArgumentTypeMismatch(
             MethodArgumentTypeMismatchException exception
     ) {
-        return ResponseEntity.status(ErrorCode.COMMON_400.status())
+        return ResponseEntity.status(CommonErrorCode.COMMON_400.status())
                 .body(new CommonResponse<>(
                         false,
-                        ErrorCode.COMMON_400.code(),
-                        ErrorCode.COMMON_400.defaultMessage(),
+                        CommonErrorCode.COMMON_400.code(),
+                        CommonErrorCode.COMMON_400.defaultMessage(),
                         null
                 ));
-    }
-
-    // 서비스가 GameNotFoundException을 던졌을 때만 이 메서드를 골라 실행한다.
-    // 그래서 컨트롤러마다 try-catch를 반복하지 않고도 같은 404 규칙을 적용할 수 있다.
-    @ExceptionHandler(GameNotFoundException.class)
-    public ResponseEntity<CommonResponse<Void>> handleGameNotFound(GameNotFoundException exception) {
-        // 업무 예외를 클라이언트와 약속한 HTTP 404 + 공통 JSON 응답으로 변환하는 경계다.
-        // Void와 null은 이 실패 응답에는 돌려줄 게임 데이터가 없다는 뜻이다.
-        return ResponseEntity.status(ErrorCode.GAME_001.status())
-                .body(new CommonResponse<>(false, ErrorCode.GAME_001.code(), exception.getMessage(), null));
     }
 
     // FindGameQuery 같은 입력 검증 코드에서 IllegalArgumentException이 발생하면 이 메서드가 처리한다.
@@ -55,27 +31,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<CommonResponse<Void>> handleIllegalArgumentException(
             IllegalArgumentException exception
     ) {
-        return ResponseEntity.status(ErrorCode.COMMON_400.status())
-                .body(new CommonResponse<>(false, ErrorCode.COMMON_400.code(), exception.getMessage(), null));
+        return ResponseEntity.status(CommonErrorCode.COMMON_400.status())
+                .body(new CommonResponse<>(false, CommonErrorCode.COMMON_400.code(), exception.getMessage(), null));
     }
 
-    private ResponseEntity<CommonResponse<Void>> errorResponse(ErrorCode errorCode) {
-        return ResponseEntity.status(errorCode.status())
-                .body(new CommonResponse<>(false, errorCode.code(), errorCode.defaultMessage(), null));
-    }
-
-
-    @ExceptionHandler(GameUserAlreadyRegisteredException.class)
-    public ResponseEntity<CommonResponse<Void>> handleGameUserAlreadyRegistered(
-            GameUserAlreadyRegisteredException exception
-    ) {
-        return errorResponse(ErrorCode.GAME_USER_003);
-    }
-
-    @ExceptionHandler(GameUserNicknameAlreadyInUseException.class)
-    public ResponseEntity<CommonResponse<Void>> handleGameUserNicknameAlreadyInUse(
-            GameUserNicknameAlreadyInUseException exception
-    ) {
-        return errorResponse(ErrorCode.GAME_USER_002);
-    }
 }

@@ -1,6 +1,7 @@
 package com.hd.gamematch.auth.security;
 
 import com.hd.gamematch.auth.application.service.AuthService;
+import com.hd.gamematch.global.exception.code.AuthErrorCode;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -30,7 +31,7 @@ public class KakaoOAuth2LoginSuccessHandler implements AuthenticationSuccessHand
         if (kakaoMemberId == null) {
             kakaoOAuth2LoginFailureHandler.redirectToFrontend(
                     response,
-                    com.hd.gamematch.global.exception.ErrorCode.AUTH_PROVIDER_UNAVAILABLE
+                    AuthErrorCode.AUTH_PROVIDER_UNAVAILABLE
             );
             return;
         }
