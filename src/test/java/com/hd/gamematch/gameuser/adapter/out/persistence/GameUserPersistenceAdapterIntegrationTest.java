@@ -23,7 +23,7 @@ class GameUserPersistenceAdapterIntegrationTest {
     private GameUserJpaRepository gameUserJpaRepository;
 
     @Test
-    void saveStoresGameUser() {
+    void 게임_프로필을_저장한다() {
         // Given
         GameUser gameUser = GameUser.create(1L, 10L, "playerA");
 
@@ -41,7 +41,7 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
-    void existsReturnsTrueWhenSameUserAndGameProfileExists() {
+    void 같은_사용자와_게임의_프로필이_있으면_참을_반환한다() {
         // Given: 이미 같은 사용자와 게임으로 저장된 프로필이 있다.
         gameUserPersistenceAdapter.save(
                 GameUser.create(1L, 10L, "playerA")
@@ -56,7 +56,7 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
-    void databaseRejectsDuplicateGameUserForSameUserAndGame() {
+    void 같은_사용자와_게임의_중복_프로필을_데이터베이스가_거부한다() {
         // Given: 이미 한 사용자가 특정 게임에 등록돼 있다.
         gameUserJpaRepository.saveAndFlush(
                 GameUserJpaEntity.of(1L, 10L, "playerA")
@@ -73,7 +73,7 @@ class GameUserPersistenceAdapterIntegrationTest {
 
 
     @Test
-    void saveConvertsDuplicateConstraintViolationToGameUserAlreadyRegisteredException() {
+    void 사용자와_게임_중복_제약_위반을_이미_등록됨_예외로_변환한다() {
         // Given: 이미 같은 사용자와 게임으로 저장된 프로필이 있다.
         gameUserPersistenceAdapter.save(
                 GameUser.create(1L, 10L, "playerA")
@@ -88,7 +88,7 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
-    void saveConvertsDuplicateNicknameConstraintViolationToNicknameAlreadyInUseException() {
+    void 게임과_닉네임_중복_제약_위반을_닉네임_사용_중_예외로_변환한다() {
         // Given: 첫 사용자가 게임 10에서 playerA 닉네임을 이미 사용 중이다.
         gameUserPersistenceAdapter.save(
                 GameUser.create(1L, 10L, "playerA")
@@ -104,7 +104,7 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
-    void saveDoesNotConvertOtherIntegrityViolationsToDuplicateRegistrationException() {
+    void 다른_무결성_위반은_이미_등록됨_예외로_변환하지_않는다() {
         // Given: nickname은 DB에서 NULL을 허용하지 않는 별도의 무결성 규칙이다.
         GameUser gameUserWithMissingNickname = GameUser.create(1L, 10L, null);
 
@@ -117,7 +117,7 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
-    void existsReturnsTrueWhenSameGameNicknameExists() {
+    void 같은_게임에서_닉네임이_있으면_참을_반환한다() {
         // Given: 특정 게임에서 playerA 닉네임을 사용하는 프로필이 이미 있다.
         gameUserPersistenceAdapter.save(
                 GameUser.create(1L, 10L, "playerA")
@@ -132,7 +132,7 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
-    void databaseRejectsDuplicateNicknameForSameGame() {
+    void 같은_게임의_중복_닉네임을_데이터베이스가_거부한다() {
         // Given: 첫 사용자가 게임 10에서 playerA 닉네임을 사용 중이다.
         gameUserJpaRepository.saveAndFlush(
                 GameUserJpaEntity.of(1L, 10L, "playerA")

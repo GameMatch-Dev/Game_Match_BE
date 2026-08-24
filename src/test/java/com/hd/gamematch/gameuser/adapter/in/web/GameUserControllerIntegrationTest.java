@@ -40,7 +40,7 @@ class GameUserControllerIntegrationTest {
     private GameUserJpaRepository gameUserJpaRepository;
 
     @Test
-    void registerGameUserCreatesGameProfile() throws Exception {
+    void 게임_프로필_등록_요청이_성공하면_프로필을_생성한다() throws Exception {
         // Given: 인증할 사용자와 등록 대상 게임을 테스트 DB에 준비한다.
         UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
         GameJpaEntity savedGame = gameJpaRepository.save(
@@ -83,7 +83,7 @@ class GameUserControllerIntegrationTest {
 
 
     @Test
-    void registerGameUserRejectsDuplicateRegistrationForSameUserAndGame() throws Exception {
+    void 같은_사용자가_같은_게임에_재등록하면_거부한다() throws Exception {
         // Given: 한 사용자와 게임, 그리고 인증 토큰을 준비한다.
         UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
         GameJpaEntity savedGame = gameJpaRepository.save(
@@ -132,7 +132,7 @@ class GameUserControllerIntegrationTest {
 
     // 서로 다른 사용자라도 같은 게임에서 이미 사용 중인 닉네임으로 등록할 수 없다.
     @Test
-    void registerGameUserRejectsDuplicateNicknameForSameGame() throws Exception {
+    void 같은_게임에서_닉네임이_중복되면_거부한다() throws Exception {
         // Given: 서로 다른 인증 사용자 두 명과 같은 게임을 준비한다.
         UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
         UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());

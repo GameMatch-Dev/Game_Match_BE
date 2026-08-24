@@ -31,7 +31,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void doesNotAuthenticateMalformedBearerHeader() throws Exception {
+    void 형식이_잘못된_베어러_헤더는_인증하지_않는다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/auth/me");
         request.addHeader("Authorization", "Basic credentials");
         AtomicBoolean nextFilterCalled = new AtomicBoolean();
@@ -44,7 +44,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void clearsAuthenticationWhenBearerTokenCannotBeDecoded() throws Exception {
+    void 베어러_토큰을_해독할_수_없으면_인증_정보를_비운다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/auth/me");
         request.addHeader("Authorization", "Bearer invalid-token");
         given(jwtTokenService.jwtDecoder()).willReturn(jwtDecoder);
@@ -58,7 +58,7 @@ class JwtAuthenticationFilterTest {
     }
 
     @Test
-    void storesInternalUserIdAsAuthenticatedPrincipalForValidBearerToken() throws Exception {
+    void 유효한_베어러_토큰의_내부_사용자_식별자를_주체에_저장한다() throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", "/auth/me");
         request.addHeader("Authorization", "Bearer valid-token");
         given(jwtTokenService.jwtDecoder()).willReturn(jwtDecoder);

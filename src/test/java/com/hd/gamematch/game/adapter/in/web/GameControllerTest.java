@@ -34,7 +34,7 @@ class GameControllerTest {
     private GameController gameController;
 
     @Test
-    void findGamesReturnsCommonResponseWithGameResponses() {
+    void 게임_목록을_공통_응답으로_반환한다() {
         Game game = Game.of(
                 1L,
                 "League of Legends",
@@ -64,7 +64,7 @@ class GameControllerTest {
     }
 
     @Test
-    void findGameReturnsCommonResponseWithGameResponse() {
+    void 게임_상세를_공통_응답으로_반환한다() {
         Game game = Game.of(
                 1L,
                 "League of Legends",

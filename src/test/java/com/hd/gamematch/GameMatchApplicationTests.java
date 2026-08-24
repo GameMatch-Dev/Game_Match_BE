@@ -7,7 +7,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 class GameMatchApplicationTests {
 
     @Test
-    void contextLoads() {
+    void 스프링_애플리케이션_컨텍스트를_불러온다() {
     }
 
 }

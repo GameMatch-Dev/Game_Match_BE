@@ -30,7 +30,7 @@ class FindGameServiceTest {
     private FindGameService findGameService;
 
     @Test
-    void findGameById() {
+    void 게임_식별자로_게임을_조회한다() {
         // given: 포트가 게임을 찾았다고 가정한다.
         Game game = Game.of(
                 1L,
@@ -53,7 +53,7 @@ class FindGameServiceTest {
     }
 
     @Test
-    void throwsGameNotFoundExceptionWhenGameDoesNotExist() {
+    void 게임이_없으면_게임_없음_예외를_던진다() {
         // given: Optional.empty()는 저장소에 해당 ID의 게임이 없다는 상황을 뜻한다.
         given(loadGamePort.loadGameById(999L))
                 .willReturn(Optional.empty());

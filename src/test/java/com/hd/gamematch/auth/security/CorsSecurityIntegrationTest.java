@@ -26,7 +26,7 @@ class CorsSecurityIntegrationTest {
     private CorsConfigurationSource corsConfigurationSource;
 
     @Test
-    void loadsConfiguredFrontendOriginIntoCorsSource() {
+    void 설정한_프런트엔드_출처를_교차_출처_설정에_적용한다() {
         CorsConfiguration configuration = corsConfigurationSource.getCorsConfiguration(
                 new MockHttpServletRequest("OPTIONS", "/auth/me")
         );
@@ -34,7 +34,7 @@ class CorsSecurityIntegrationTest {
     }
 
     @Test
-    void allowsConfiguredFrontendOriginToPreflightAuthenticatedRequest() throws Exception {
+    void 설정한_프런트엔드_출처의_인증_사전_요청을_허용한다() throws Exception {
         mockMvc.perform(options("/auth/me")
                         .header(HttpHeaders.ORIGIN, "http://localhost:3000")
                         .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "GET")

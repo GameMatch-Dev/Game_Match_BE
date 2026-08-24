@@ -35,7 +35,7 @@ class FindGamesServiceTest {
     }
 
     @Test
-    void loadByNameAndSortWhenBothConditionsExist() {
+    void 이름과_정렬_조건이_있으면_둘_다로_조회한다() {
         given(loadGamesPort.loadGamesByNameAndSort("League", "MOBA"))
                 .willReturn(games);
 
@@ -48,7 +48,7 @@ class FindGamesServiceTest {
     }
 
     @Test
-    void loadByNameWhenOnlyNameExists() {
+    void 이름_조건만_있으면_이름으로_조회한다() {
         given(loadGamesPort.loadGamesByName("League"))
                 .willReturn(games);
 
@@ -61,7 +61,7 @@ class FindGamesServiceTest {
     }
 
     @Test
-    void loadBySortWhenOnlySortExists() {
+    void 정렬_조건만_있으면_정렬값으로_조회한다() {
         given(loadGamesPort.loadGamesBySort("MOBA"))
                 .willReturn(games);
 
@@ -74,7 +74,7 @@ class FindGamesServiceTest {
     }
 
     @Test
-    void loadAllWhenNoConditionExists() {
+    void 조건이_없으면_전체를_조회한다() {
         given(loadGamesPort.loadAllGames())
                 .willReturn(games);
 
