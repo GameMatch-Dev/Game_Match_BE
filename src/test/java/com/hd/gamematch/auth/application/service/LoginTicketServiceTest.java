@@ -14,7 +14,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class LoginTicketServiceTest {
 
     @Test
-    void consumeRejectsUnknownTicket() {
+    void 알_수_없는_티켓_사용을_거부한다() {
         LoginTicketService loginTicketService = new LoginTicketService(new MutableClock());
 
         assertThrows(InvalidLoginTicketException.class,
@@ -22,7 +22,7 @@ class LoginTicketServiceTest {
     }
 
     @Test
-    void consumeRejectsTicketThatWasAlreadyUsed() {
+    void 이미_사용한_티켓_재사용을_거부한다() {
         LoginTicketService loginTicketService = new LoginTicketService(new MutableClock());
         String ticket = loginTicketService.issue(3L);
 
@@ -32,7 +32,7 @@ class LoginTicketServiceTest {
     }
 
     @Test
-    void consumeRejectsExpiredTicket() {
+    void 만료된_티켓_사용을_거부한다() {
         MutableClock clock = new MutableClock();
         LoginTicketService loginTicketService = new LoginTicketService(clock);
         String ticket = loginTicketService.issue(3L);

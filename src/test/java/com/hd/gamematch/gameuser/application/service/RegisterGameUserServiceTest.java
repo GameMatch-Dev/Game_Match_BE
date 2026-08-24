@@ -43,7 +43,7 @@ class RegisterGameUserServiceTest {
     private ExistsGameUserNicknamePort existsGameUserNicknamePort;
 
     @Test
-    void registerGameUser() {
+    void 게임_프로필을_저장한다() {
         // Given
         RegisterGameUserCommand command = new RegisterGameUserCommand(
                 1L,
@@ -70,7 +70,7 @@ class RegisterGameUserServiceTest {
     }
 
     @Test
-    void registerGameUserRejectsWhenUserAlreadyRegisteredForGame() {
+    void 같은_사용자가_같은_게임에_이미_등록되어_있으면_거부한다() {
         // Given: 이미 같은 게임에 등록된 사용자라고 가정한다.
         RegisterGameUserCommand command = new RegisterGameUserCommand(
                 1L,
@@ -89,7 +89,7 @@ class RegisterGameUserServiceTest {
     }
 
     @Test
-    void registerGameUserRejectsWhenNicknameIsAlreadyUsedForGame() {
+    void 같은_게임에서_닉네임이_이미_사용_중이면_거부한다() {
         // Given: 다른 사용자가 같은 게임에서 이미 playerA 닉네임을 사용 중이다.
         RegisterGameUserCommand command = new RegisterGameUserCommand(
                 2L,

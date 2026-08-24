@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class FindGamesQueryTest {
 
     @Test
-    void nameAndSortAreTrimmed() {
+    void 이름과_정렬값의_앞뒤_공백을_제거한다() {
         FindGamesQuery query = FindGamesQuery.of(" League of Legends ", " MOBA ");
 
         assertTrue(query.hasName());
@@ -21,7 +21,7 @@ class FindGamesQueryTest {
     }
 
     @Test
-    void blankValuesAreNormalizedToNull() {
+    void 빈_값은_널로_정규화한다() {
         FindGamesQuery query = FindGamesQuery.of(" ", "\t");
 
         assertFalse(query.hasName());
@@ -31,7 +31,7 @@ class FindGamesQueryTest {
     }
 
     @Test
-    void rejectsNameLongerThanOneHundredCharactersAfterTrimming() {
+    void 공백_제거_후_이름이_백_글자를_초과하면_거부한다() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> FindGamesQuery.of(" " + "a".repeat(101) + " ", null)
@@ -41,7 +41,7 @@ class FindGamesQueryTest {
     }
 
     @Test
-    void rejectsNameContainingControlCharacter() {
+    void 이름에_제어_문자가_있으면_거부한다() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> FindGamesQuery.of("League\nof Legends", null)
@@ -51,7 +51,7 @@ class FindGamesQueryTest {
     }
 
     @Test
-    void rejectsSortLongerThanFiftyCharactersAfterTrimming() {
+    void 공백_제거_후_정렬값이_오십_글자를_초과하면_거부한다() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> FindGamesQuery.of(null, " " + "a".repeat(51) + " ")
@@ -61,7 +61,7 @@ class FindGamesQueryTest {
     }
 
     @Test
-    void validatesNameBeforeSortWhenBothValuesAreInvalid() {
+    void 이름과_정렬값이_모두_유효하지_않으면_이름을_먼저_검증한다() {
         IllegalArgumentException exception = assertThrows(
                 IllegalArgumentException.class,
                 () -> FindGamesQuery.of("a".repeat(101), "a".repeat(51))

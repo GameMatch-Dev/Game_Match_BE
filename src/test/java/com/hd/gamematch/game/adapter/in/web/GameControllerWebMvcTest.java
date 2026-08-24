@@ -48,7 +48,7 @@ class GameControllerWebMvcTest {
     private FindGamesUseCase findGamesUseCase;
 
     @Test
-    void findGameReturnsNotFoundResponseWhenGameDoesNotExist() throws Exception {
+    void 존재하지_않는_게임을_조회하면_404_응답을_반환한다() throws Exception {
         // given-willThrow: 컨트롤러가 유스케이스를 호출하면 "게임 없음" 예외가 난다고 설정한다.
         // 이 설정으로 실제 DB 없이도 예외 처리 흐름을 재현할 수 있다.
         given(findGameUseCase.findGame(FindGameQuery.of(999L)))
@@ -67,7 +67,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGameReturnsBadRequestResponseWhenGameIdIsNotNumeric() throws Exception {
+    void 숫자가_아닌_게임_식별자를_조회하면_400_응답을_반환한다() throws Exception {
         mockMvc.perform(get("/games/abc").accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON))
@@ -80,7 +80,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGameReturnsBadRequestResponseWhenGameIdIsMinusOne() throws Exception {
+    void 음수_게임_식별자를_조회하면_400_응답을_반환한다() throws Exception {
         // FindGameQuery.of(-1L)에서 검증 예외가 먼저 발생하므로 유스케이스 Mock 설정은 필요 없다.
         mockMvc.perform(get("/games/{gameId}", -1L)
                         .accept(MediaType.APPLICATION_JSON))
@@ -93,7 +93,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGameReturnsBadRequestResponseWhenGameIdIsZero() throws Exception {
+    void 영인_게임_식별자를_조회하면_400_응답을_반환한다() throws Exception {
         // 0은 허용 범위 바로 밖의 경계값이므로, 음수값과 별도로 같은 400 계약을 확인한다.
         mockMvc.perform(get("/games/{gameId}", 0L)
                         .accept(MediaType.APPLICATION_JSON))
@@ -106,7 +106,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGameReturnsSuccessResponseWhenGameExists() throws Exception {
+    void 존재하는_게임을_조회하면_성공_응답을_반환한다() throws Exception {
         // 새 404 처리가 기존의 정상 조회(200 OK) 결과를 바꾸지 않았는지 확인하는 회귀 테스트다.
         Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
         given(findGameUseCase.findGame(FindGameQuery.of(1L))).willReturn(game);
@@ -121,7 +121,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesTreatsBlankFiltersAsNotApplied() throws Exception {
+    void 빈_목록_필터는_적용하지_않는다() throws Exception {
         given(findGamesUseCase.findGames(FindGamesQuery.of(null, null))).willReturn(java.util.List.of());
 
         mockMvc.perform(get("/games")
@@ -138,7 +138,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesReturnsEmptySuccessResponseForUnknownSort() throws Exception {
+    void 알_수_없는_정렬값에는_빈_성공_응답을_반환한다() throws Exception {
         given(findGamesUseCase.findGames(FindGamesQuery.of(null, "Unknown"))).willReturn(java.util.List.of());
 
         mockMvc.perform(get("/games")
@@ -154,7 +154,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesRejectsRepeatedNameParameter() throws Exception {
+    void 이름_파라미터가_반복되면_거부한다() throws Exception {
         assertInvalidListRequest(
                 get("/games").param("name", "League", "Overwatch"),
                 "name 파라미터는 한 번만 지정할 수 있습니다."
@@ -162,7 +162,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesRejectsRepeatedSortParameter() throws Exception {
+    void 정렬_파라미터가_반복되면_거부한다() throws Exception {
         assertInvalidListRequest(
                 get("/games").param("sort", "MOBA", "FPS"),
                 "sort 파라미터는 한 번만 지정할 수 있습니다."
@@ -170,7 +170,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesPrioritizesRepeatedNameOverRepeatedSort() throws Exception {
+    void 이름과_정렬_파라미터가_모두_반복되면_이름_오류를_우선한다() throws Exception {
         assertInvalidListRequest(
                 get("/games")
                         .param("name", "League", "Overwatch")
@@ -180,7 +180,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesRejectsNameLongerThanOneHundredCharacters() throws Exception {
+    void 이름이_백_글자를_초과하면_거부한다() throws Exception {
         assertInvalidListRequest(
                 get("/games").param("name", "a".repeat(101)),
                 "name은 100자 이하여야 합니다."
@@ -188,7 +188,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesRejectsNameContainingControlCharacter() throws Exception {
+    void 이름에_제어_문자가_있으면_거부한다() throws Exception {
         assertInvalidListRequest(
                 get("/games").param("name", "League\nof Legends"),
                 "name에는 제어문자를 포함할 수 없습니다."
@@ -196,7 +196,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesRejectsSortLongerThanFiftyCharacters() throws Exception {
+    void 정렬값이_오십_글자를_초과하면_거부한다() throws Exception {
         assertInvalidListRequest(
                 get("/games").param("sort", "a".repeat(51)),
                 "sort는 50자 이하여야 합니다."
@@ -204,7 +204,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesReturnsSuccessResponseWithoutFilters() throws Exception {
+    void 필터_없이_게임_목록을_조회하면_성공_응답을_반환한다() throws Exception {
         Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
         given(findGamesUseCase.findGames(FindGamesQuery.of(null, null))).willReturn(java.util.List.of(game));
 
@@ -224,7 +224,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesReturnsSuccessResponseWithNameFilter() throws Exception {
+    void 이름_필터로_게임_목록을_조회하면_성공_응답을_반환한다() throws Exception {
         Game game = Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol");
         given(findGamesUseCase.findGames(FindGamesQuery.of("League of Legends", null))).willReturn(java.util.List.of(game));
 
@@ -244,7 +244,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesReturnsSuccessResponseWithSortFilter() throws Exception {
+    void 정렬_필터로_게임_목록을_조회하면_성공_응답을_반환한다() throws Exception {
         Game game = Game.of(3L, "Hades", "Roguelike", "https://example.com/hades");
         given(findGamesUseCase.findGames(FindGamesQuery.of(null, "Roguelike"))).willReturn(java.util.List.of(game));
 
@@ -264,7 +264,7 @@ class GameControllerWebMvcTest {
     }
 
     @Test
-    void findGamesReturnsSuccessResponseWithNameAndSortFilters() throws Exception {
+    void 이름과_정렬_필터로_게임_목록을_조회하면_성공_응답을_반환한다() throws Exception {
         Game game = Game.of(4L, "Overwatch 2", "FPS", "https://example.com/overwatch2");
         given(findGamesUseCase.findGames(FindGamesQuery.of("Overwatch 2", "FPS"))).willReturn(java.util.List.of(game));
 
