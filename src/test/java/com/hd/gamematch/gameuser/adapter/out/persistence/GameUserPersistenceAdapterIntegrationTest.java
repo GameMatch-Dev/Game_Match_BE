@@ -1,8 +1,13 @@
 package com.hd.gamematch.gameuser.adapter.out.persistence;
 
+import com.hd.gamematch.auth.adapter.out.persistence.UserJpaEntity;
+import com.hd.gamematch.auth.adapter.out.persistence.UserJpaRepository;
+import com.hd.gamematch.game.adapter.out.persistence.GameJpaEntity;
+import com.hd.gamematch.game.adapter.out.persistence.GameJpaRepository;
 import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegisteredException;
 import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.gameuser.domain.GameUser;
+import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -21,6 +26,12 @@ class GameUserPersistenceAdapterIntegrationTest {
 
     @Autowired
     private GameUserJpaRepository gameUserJpaRepository;
+
+    @Autowired
+    private UserJpaRepository userJpaRepository;
+
+    @Autowired
+    private GameJpaRepository gameJpaRepository;
 
     @Test
     void 게임_프로필을_저장한다() {
@@ -146,5 +157,39 @@ class GameUserPersistenceAdapterIntegrationTest {
         assertThatThrownBy(() ->
                 gameUserJpaRepository.saveAndFlush(duplicateNicknameGameUser)
         ).isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void 사용자와_게임으로_게임_프로필을_조회한다() {
+        // Given: 연결된 사용자, 게임, 게임 프로필을 모두 저장한다.
+        UserJpaEntity user = userJpaRepository.save(UserJpaEntity.create());
+        GameJpaEntity game = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        GameUserJpaEntity gameUser = gameUserJpaRepository.save(
+                GameUserJpaEntity.of(user.getId(), game.getId(), "playerA")
+        );
+
+        // When
+        var result = gameUserPersistenceAdapter.loadGameUserByUserIdAndGameId(
+                user.getId(),
+                game.getId()
+        );
+
+        // Then
+        assertThat(result).isPresent();
+        GameUserProfile profile = result.orElseThrow();
+        assertThat(profile.id()).isEqualTo(gameUser.getId());
+        assertThat(profile.nickname()).isEqualTo("playerA");
+        assertThat(profile.userId()).isEqualTo(user.getId());
+        assertThat(profile.game().id()).isEqualTo(game.getId());
+        assertThat(profile.game().name()).isEqualTo("League of Legends");
+    }
+
+    @Test
+    void 사용자와_게임에_해당하는_프로필이_없으면_빈_값을_반환한다() {
+        var result = gameUserPersistenceAdapter.loadGameUserByUserIdAndGameId(999L, 10L);
+
+        assertThat(result).isEmpty();
     }
 }
