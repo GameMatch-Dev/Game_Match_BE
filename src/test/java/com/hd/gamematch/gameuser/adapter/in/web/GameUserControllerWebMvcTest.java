@@ -4,6 +4,8 @@ import com.hd.gamematch.game.adapter.in.web.exception.GameExceptionHandler;
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.gameuser.adapter.in.web.exception.GameUserExceptionHandler;
 import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
+import com.hd.gamematch.gameuser.application.port.in.FindGameUserByUserAndGameQuery;
+import com.hd.gamematch.gameuser.application.port.in.FindGameUserByUserAndGameUseCase;
 import com.hd.gamematch.gameuser.application.port.in.FindGameUserQuery;
 import com.hd.gamematch.gameuser.application.port.in.FindGameUserUseCase;
 import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserUseCase;
@@ -11,6 +13,7 @@ import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.game.application.port.in.FindGameUseCase;
 import com.hd.gamematch.global.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.context.annotation.Import;
@@ -45,6 +48,9 @@ class GameUserControllerWebMvcTest {
 
     @MockitoBean
     private FindGameUserUseCase findGameUserUseCase;
+
+    @MockitoBean
+    private FindGameUserByUserAndGameUseCase findGameUserByUserAndGameUseCase;
 
     @Test
     void 존재하는_게임_프로필을_조회하면_공개_응답을_반환한다() throws Exception {
@@ -93,5 +99,80 @@ class GameUserControllerWebMvcTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"))
                 .andExpect(jsonPath("$.message").value("gameUserId는 1 이상이어야 합니다."));
+    }
+
+
+    @Test
+    void 토큰_없이_현재_사용자의_게임_프로필을_조회하면_401_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/me/games/{gameId}", 2L)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+    }
+
+
+    @Test
+    void 현재_사용자의_게임_프로필을_조회하면_최소_응답을_반환한다() throws Exception {
+        // given
+        GameUserProfile profile = new GameUserProfile(
+                1L,
+                "playerA",
+                Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol"),
+                3L
+        );
+
+        given(findGameUserByUserAndGameUseCase.findGameUser(
+                FindGameUserByUserAndGameQuery.of(3L, 2L)
+        )).willReturn(profile);
+
+
+        // when & then
+        mockMvc.perform(get("/game-users/me/games/{gameId}", 2L)
+                        .principal(new TestingAuthenticationToken(3L, "token"))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.nickname").value("playerA"))
+                .andExpect(jsonPath("$.data.game.id").value(2))
+                .andExpect(jsonPath("$.data.game.name").value("League of Legends"))
+                .andExpect(jsonPath("$.data.game.sort").value("MOBA"))
+                .andExpect(jsonPath("$.data.game.url").value("https://example.com/lol"))
+                .andExpect(jsonPath("$.data.user.id").value(3))
+                .andExpect(jsonPath("$.data.user.email").doesNotExist())
+                .andExpect(jsonPath("$.data.user.phoneNumber").doesNotExist())
+                .andExpect(jsonPath("$.data.user.group").doesNotExist());
+    }
+
+    @Test
+    void 게임_ID가_0이면_현재_사용자의_게임_프로필_조회에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/me/games/{gameId}", 0L)
+                        .principal(new TestingAuthenticationToken(3L, "token"))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    @Test
+    void 게임_ID가_음수이면_현재_사용자의_게임_프로필_조회에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/me/games/{gameId}", -1L)
+                        .principal(new TestingAuthenticationToken(3L, "token"))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    @Test
+    void 현재_사용자에게_해당_게임_프로필이_없으면_404_응답을_반환한다() throws Exception {
+        given(findGameUserByUserAndGameUseCase.findGameUser(
+                FindGameUserByUserAndGameQuery.of(3L, 2L)
+        )).willThrow(new GameUserNotFoundException());
+
+        mockMvc.perform(get("/game-users/me/games/{gameId}", 2L)
+                        .principal(new TestingAuthenticationToken(3L, "token"))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_USER_001"));
     }
 }
