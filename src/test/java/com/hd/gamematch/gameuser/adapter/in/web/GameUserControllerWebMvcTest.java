@@ -12,11 +12,12 @@ import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserUseCase;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.game.application.port.in.FindGameUseCase;
 import com.hd.gamematch.global.exception.GlobalExceptionHandler;
+import com.hd.gamematch.support.security.SecuredWebMvcTestSupport;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -34,8 +35,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         value = GameUserController.class,
         excludeAutoConfiguration = OAuth2ClientWebSecurityAutoConfiguration.class
 )
-@Import({GlobalExceptionHandler.class, GameExceptionHandler.class, GameUserExceptionHandler.class})
-class GameUserControllerWebMvcTest {
+@Import({GlobalExceptionHandler.class,
+        GameExceptionHandler.class,
+        GameUserExceptionHandler.class})
+class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
 
     @Autowired
     private MockMvc mockMvc;
@@ -128,7 +131,7 @@ class GameUserControllerWebMvcTest {
 
         // when & then
         mockMvc.perform(get("/game-users/me/games/{gameId}", 2L)
-                        .principal(new TestingAuthenticationToken(3L, "token"))
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
@@ -148,7 +151,7 @@ class GameUserControllerWebMvcTest {
     @Test
     void 게임_ID가_0이면_현재_사용자의_게임_프로필_조회에_400_응답을_반환한다() throws Exception {
         mockMvc.perform(get("/game-users/me/games/{gameId}", 0L)
-                        .principal(new TestingAuthenticationToken(3L, "token"))
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
@@ -157,7 +160,7 @@ class GameUserControllerWebMvcTest {
     @Test
     void 게임_ID가_음수이면_현재_사용자의_게임_프로필_조회에_400_응답을_반환한다() throws Exception {
         mockMvc.perform(get("/game-users/me/games/{gameId}", -1L)
-                        .principal(new TestingAuthenticationToken(3L, "token"))
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
@@ -170,7 +173,7 @@ class GameUserControllerWebMvcTest {
         )).willThrow(new GameUserNotFoundException());
 
         mockMvc.perform(get("/game-users/me/games/{gameId}", 2L)
-                        .principal(new TestingAuthenticationToken(3L, "token"))
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GAME_USER_001"));

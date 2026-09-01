@@ -3,10 +3,7 @@ package com.hd.gamematch.gameuser.adapter.in.web;
 import com.hd.gamematch.game.application.port.in.FindGameQuery;
 import com.hd.gamematch.game.application.port.in.FindGameUseCase;
 import com.hd.gamematch.game.domain.Game;
-import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserCommand;
-import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserUseCase;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserQuery;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.*;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.global.response.CommonResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +33,8 @@ public class GameUserController {
     private final RegisterGameUserUseCase registerGameUserUseCase;
 
     private final FindGameUserUseCase findGameUserUseCase;
+
+    private final FindGameUserByUserAndGameUseCase findGameUserByUserAndGameUseCase;
 
     @GetMapping("/{gameUserId}")
     public ResponseEntity<CommonResponse<FindGameUserResponse>> getGameUserProfile(
@@ -84,5 +83,21 @@ public class GameUserController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(CommonResponse.success(response));
+    }
+
+    @GetMapping("/me/games/{gameId}")
+    public ResponseEntity<CommonResponse<FindGameUserResponse>> getMyGameUserProfile(
+            @PathVariable Long gameId,
+            Authentication authentication
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
+
+        GameUserProfile gameUserProfile = findGameUserByUserAndGameUseCase.findGameUser(
+                FindGameUserByUserAndGameQuery.of(userId, gameId)
+        );
+
+        return ResponseEntity.ok(
+                CommonResponse.success(FindGameUserResponse.from(gameUserProfile))
+        );
     }
 }
