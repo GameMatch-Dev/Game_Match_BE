@@ -288,6 +288,36 @@ class GameUserControllerIntegrationTest {
     }
 
     @Test
+    void 같은_게임에_다른_사용자의_프로필만_있으면_현재_사용자는_404_응답을_반환한다() throws Exception {
+        UserJpaEntity currentUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity otherUser = userJpaRepository.save(UserJpaEntity.create());
+        GameJpaEntity savedGame = gameJpaRepository.save(
+                GameJpaEntity.of(
+                        "League of Legends",
+                        "MOBA",
+                        "https://example.com/lol"
+                )
+        );
+        gameUserJpaRepository.save(
+                GameUserJpaEntity.of(
+                        otherUser.getId(),
+                        savedGame.getId(),
+                        "otherPlayer"
+                )
+        );
+
+        String accessToken = jwtTokenService
+                .issueAccessToken(currentUser.getId())
+                .value();
+
+        mockMvc.perform(get("/game-users/me/games/{gameId}", savedGame.getId())
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.code").value("GAME_USER_001"));
+    }
+
+    @Test
     void 토큰_없이_현재_사용자의_게임_프로필을_조회하면_401_응답을_반환한다() throws Exception {
         mockMvc.perform(get("/game-users/me/games/{gameId}", 1L)
                         .accept(MediaType.APPLICATION_JSON))
