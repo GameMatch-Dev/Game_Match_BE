@@ -16,7 +16,8 @@ For every backend feature, act as the coordinator; do not silently do the entire
    - `review-first`: an AI implementation is allowed, but the human must review it before test and review stages.
 5. Only after that gate, spawn `gamematch_backend_implementer` for the approved scope.
 6. Spawn `gamematch_test_engineer` and `gamematch_independent_reviewer` as separate agents. Wait for both reports.
-7. Summarize evidence, unresolved risks, and the human's next decision. Do not merge, deploy, or alter operational data without explicit human approval.
+7. When implementation and executed-test evidence are review-ready, run the read-only Claude cross-model review in [`docs/claude-code-cross-review.md`](docs/claude-code-cross-review.md). Codex remains the lead and records each Claude finding as `ACCEPT` or `REJECT` with evidence.
+8. Summarize evidence, review metrics, unresolved risks, and the human's next decision. Do not merge, deploy, or alter operational data without explicit human approval.
 
 ## Human-approved workflow exceptions
 
