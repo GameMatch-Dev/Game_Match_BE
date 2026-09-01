@@ -7,6 +7,7 @@ import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegistered
 import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserNicknamePort;
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserPort;
+import com.hd.gamematch.gameuser.application.port.out.LoadGameUserByUserAndGamePort;
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.SaveGameUserPort;
 import com.hd.gamematch.gameuser.domain.GameUser;
@@ -21,7 +22,8 @@ import java.util.Locale;
 
 @Component
 @RequiredArgsConstructor
-public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameUserPort, ExistsGameUserNicknamePort, LoadGameUserPort {
+public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameUserPort, ExistsGameUserNicknamePort,
+        LoadGameUserPort, LoadGameUserByUserAndGamePort {
 
     private static final String DUPLICATE_REGISTRATION_CONSTRAINT =
             "uk_game_user_user_id_game_id";
@@ -112,5 +114,14 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
                             gameUser.getUserId()
                     );
                 });
+    }
+
+    @Override
+    public java.util.Optional<GameUserProfile> loadGameUserByUserIdAndGameId(
+            Long userId,
+            Long gameId
+    ) {
+        return gameUserJpaRepository.findByUserIdAndGameId(userId, gameId)
+                .flatMap(gameUser -> loadGameUserById(gameUser.getId()));
     }
 }
