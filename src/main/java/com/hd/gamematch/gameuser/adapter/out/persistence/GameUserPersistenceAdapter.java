@@ -7,6 +7,7 @@ import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegistered
 import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserNicknamePort;
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserPort;
+import com.hd.gamematch.gameuser.application.port.out.LoadGameUserByUserAndGamePort;
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.SaveGameUserPort;
 import com.hd.gamematch.gameuser.domain.GameUser;
@@ -21,7 +22,8 @@ import java.util.Locale;
 
 @Component
 @RequiredArgsConstructor
-public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameUserPort, ExistsGameUserNicknamePort, LoadGameUserPort {
+public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameUserPort, ExistsGameUserNicknamePort,
+        LoadGameUserPort, LoadGameUserByUserAndGamePort {
 
     private static final String DUPLICATE_REGISTRATION_CONSTRAINT =
             "uk_game_user_user_id_game_id";
@@ -94,23 +96,34 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
     @Override
     public java.util.Optional<GameUserProfile> loadGameUserById(Long gameUserId) {
         return gameUserJpaRepository.findById(gameUserId)
-                .map(gameUser -> {
-                    // 프로필 행은 존재하지만 연결된 게임·사용자가 없다면 데이터 정합성 오류다.
-                    // 업무상 "프로필 없음"(404)으로 숨기지 않고 서버 오류로 드러낸다.
-                    var game = gameJpaRepository.findById(gameUser.getGameId())
-                            .map(GamePersistenceMapper::toDomain)
-                            .orElseThrow(() -> new IllegalStateException("게임 프로필의 연결 게임이 존재하지 않습니다."));
+                .map(this::toGameUserProfile);
+    }
 
-                    if (!userJpaRepository.existsById(gameUser.getUserId())) {
-                        throw new IllegalStateException("게임 프로필의 연결 사용자가 존재하지 않습니다.");
-                    }
+    @Override
+    public java.util.Optional<GameUserProfile> loadGameUserByUserIdAndGameId(
+            Long userId,
+            Long gameId
+    ) {
+        return gameUserJpaRepository.findByUserIdAndGameId(userId, gameId)
+                .map(this::toGameUserProfile);
+    }
 
-                    return new GameUserProfile(
-                            gameUser.getId(),
-                            gameUser.getNickname(),
-                            game,
-                            gameUser.getUserId()
-                    );
-                });
+    private GameUserProfile toGameUserProfile(GameUserJpaEntity gameUser) {
+        // 프로필 행은 존재하지만 연결된 게임·사용자가 없다면 데이터 정합성 오류다.
+        // 업무상 "프로필 없음"(404)으로 숨기지 않고 서버 오류로 드러낸다.
+        var game = gameJpaRepository.findById(gameUser.getGameId())
+                .map(GamePersistenceMapper::toDomain)
+                .orElseThrow(() -> new IllegalStateException("게임 프로필의 연결 게임이 존재하지 않습니다."));
+
+        if (!userJpaRepository.existsById(gameUser.getUserId())) {
+            throw new IllegalStateException("게임 프로필의 연결 사용자가 존재하지 않습니다.");
+        }
+
+        return new GameUserProfile(
+                gameUser.getId(),
+                gameUser.getNickname(),
+                game,
+                gameUser.getUserId()
+        );
     }
 }
