@@ -226,4 +226,37 @@ class GameUserPersistenceAdapterIntegrationTest {
                 .containsExactly("playerA", "PlayerB");
         assertThat(totalCount).isEqualTo(2L);
     }
+
+    @Test
+    void 게임_조건이_없으면_서로_다른_게임의_닉네임_접두사_결과를_모두_조회한다() {
+        // given
+        GameJpaEntity leagueOfLegends = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        GameJpaEntity valorant = gameJpaRepository.save(
+                GameJpaEntity.of("Valorant", "FPS", "https://example.com/valorant")
+        );
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+
+        gameUserJpaRepository.saveAll(List.of(
+                GameUserJpaEntity.of(firstUser.getId(), leagueOfLegends.getId(), "playerA"),
+                GameUserJpaEntity.of(secondUser.getId(), valorant.getId(), "PlayerB")
+        ));
+
+        // when
+        List<GameUserProfile> profiles = gameUserPersistenceAdapter
+                .loadGameUsersByNicknamePrefix("PLAYER", null, 1, 10);
+        long totalCount = gameUserPersistenceAdapter
+                .countGameUsersByNicknamePrefix("PLAYER", null);
+
+        // then
+        assertThat(profiles)
+                .extracting(GameUserProfile::nickname)
+                .containsExactly("playerA", "PlayerB");
+        assertThat(profiles)
+                .extracting(profile -> profile.game().id())
+                .containsExactly(leagueOfLegends.getId(), valorant.getId());
+        assertThat(totalCount).isEqualTo(2L);
+    }
 }
