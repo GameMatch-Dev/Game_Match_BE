@@ -1,6 +1,6 @@
-package com.hd.gamematch.gameuser.adapter.in.web;
+package com.hd.gamematch.gameuser.adapter.in.web.response;
 
-import com.hd.gamematch.game.adapter.in.web.GameResponse;
+import com.hd.gamematch.game.adapter.in.web.response.GameResponse;
 import com.hd.gamematch.game.domain.Game;
 
 // 게임 프로필 등록 API가 프런트에 돌려줄 JSON 모양

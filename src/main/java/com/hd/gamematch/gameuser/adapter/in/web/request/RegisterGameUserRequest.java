@@ -1,4 +1,4 @@
-package com.hd.gamematch.gameuser.adapter.in.web;
+package com.hd.gamematch.gameuser.adapter.in.web.request;
 
 /**
  * POST /game-users 요청 JSON을 받는 Request DTO다.
