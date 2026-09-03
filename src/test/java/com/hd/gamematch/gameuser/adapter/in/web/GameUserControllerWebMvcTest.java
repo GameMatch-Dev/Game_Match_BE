@@ -239,4 +239,14 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTH_401"));
     }
+
+    @Test
+    void 닉네임이_공백이면_게임_프로필_검색에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", " ")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
 }
