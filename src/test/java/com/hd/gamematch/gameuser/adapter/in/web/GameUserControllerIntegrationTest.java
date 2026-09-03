@@ -7,12 +7,14 @@ import com.hd.gamematch.game.adapter.out.persistence.GameJpaEntity;
 import com.hd.gamematch.game.adapter.out.persistence.GameJpaRepository;
 import com.hd.gamematch.gameuser.adapter.out.persistence.GameUserJpaEntity;
 import com.hd.gamematch.gameuser.adapter.out.persistence.GameUserJpaRepository;
+import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersUseCase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,6 +42,10 @@ class GameUserControllerIntegrationTest {
 
     @Autowired
     private GameUserJpaRepository gameUserJpaRepository;
+
+    // 검색 Service 구현 전에도 실제 운영 SecurityConfig의 인증 경계를 검증하기 위한 대역이다.
+    @MockitoBean
+    private SearchGameUsersUseCase searchGameUsersUseCase;
 
     @Test
     void 게임_프로필_등록_요청이_성공하면_프로필을_생성한다() throws Exception {
@@ -320,6 +326,15 @@ class GameUserControllerIntegrationTest {
     @Test
     void 토큰_없이_현재_사용자의_게임_프로필을_조회하면_401_응답을_반환한다() throws Exception {
         mockMvc.perform(get("/game-users/me/games/{gameId}", 1L)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+    }
+
+    @Test
+    void 토큰_없이_게임_프로필을_검색하면_401_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "player")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTH_401"));

@@ -76,6 +76,7 @@ public abstract class SecuredWebMvcTestSupport {
                     .csrf(AbstractHttpConfigurer::disable)
                     .exceptionHandling(exception -> exception.authenticationEntryPoint(restAuthenticationEntryPoint))
                     .authorizeHttpRequests(authorize -> authorize
+                            .requestMatchers(HttpMethod.GET, "/game-users/search").authenticated()
                             .requestMatchers(HttpMethod.GET, "/game-users/*").permitAll()
                             .anyRequest().authenticated()
                     )
