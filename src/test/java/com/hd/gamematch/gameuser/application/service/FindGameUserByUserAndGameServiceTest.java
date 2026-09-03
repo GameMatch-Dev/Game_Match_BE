@@ -2,7 +2,7 @@ package com.hd.gamematch.gameuser.application.service;
 
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserByUserAndGameQuery;
+import com.hd.gamematch.gameuser.application.port.in.findmyprofile.FindGameUserByUserAndGameQuery;
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUserByUserAndGamePort;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import org.junit.jupiter.api.Test;

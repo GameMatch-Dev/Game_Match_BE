@@ -1,6 +1,6 @@
 package com.hd.gamematch.game.application.service;
 
-import com.hd.gamematch.game.application.port.in.FindGamesQuery;
+import com.hd.gamematch.game.application.port.in.find.FindGamesQuery;
 import com.hd.gamematch.game.application.port.out.LoadGamesPort;
 import com.hd.gamematch.game.domain.Game;
 import org.junit.jupiter.api.BeforeEach;

@@ -1,4 +1,4 @@
-package com.hd.gamematch.gameuser.application.port.in;
+package com.hd.gamematch.gameuser.application.port.in.register;
 
 /**
  * 게임 프로필 등록 기능에 전달할 입력값이다.

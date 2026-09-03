@@ -1,9 +1,14 @@
 package com.hd.gamematch.gameuser.adapter.in.web;
 
-import com.hd.gamematch.game.application.port.in.FindGameQuery;
-import com.hd.gamematch.game.application.port.in.FindGameUseCase;
+import com.hd.gamematch.game.application.port.in.find.FindGameQuery;
+import com.hd.gamematch.game.application.port.in.find.FindGameUseCase;
 import com.hd.gamematch.game.domain.Game;
-import com.hd.gamematch.gameuser.application.port.in.*;
+import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserQuery;
+import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.findmyprofile.FindGameUserByUserAndGameQuery;
+import com.hd.gamematch.gameuser.application.port.in.findmyprofile.FindGameUserByUserAndGameUseCase;
+import com.hd.gamematch.gameuser.application.port.in.register.RegisterGameUserCommand;
+import com.hd.gamematch.gameuser.application.port.in.register.RegisterGameUserUseCase;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.global.response.CommonResponse;
 import lombok.RequiredArgsConstructor;

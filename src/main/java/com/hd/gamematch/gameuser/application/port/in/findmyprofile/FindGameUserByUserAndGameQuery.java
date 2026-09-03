@@ -1,4 +1,4 @@
-package com.hd.gamematch.gameuser.application.port.in;
+package com.hd.gamematch.gameuser.application.port.in.findmyprofile;
 
 /**
  * 사용자와 게임으로 게임 프로필을 조회하는 데 필요한 입력값을 묶는다.

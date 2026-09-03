@@ -4,13 +4,16 @@ import com.hd.gamematch.game.adapter.in.web.exception.GameExceptionHandler;
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.gameuser.adapter.in.web.exception.GameUserExceptionHandler;
 import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserByUserAndGameQuery;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserByUserAndGameUseCase;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserQuery;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserUseCase;
-import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserQuery;
+import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.findmyprofile.FindGameUserByUserAndGameQuery;
+import com.hd.gamematch.gameuser.application.port.in.findmyprofile.FindGameUserByUserAndGameUseCase;
+import com.hd.gamematch.gameuser.application.port.in.register.RegisterGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersQuery;
+import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersResult;
+import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersUseCase;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
-import com.hd.gamematch.game.application.port.in.FindGameUseCase;
+import com.hd.gamematch.game.application.port.in.find.FindGameUseCase;
 import com.hd.gamematch.global.exception.GlobalExceptionHandler;
 import com.hd.gamematch.support.security.SecuredWebMvcTestSupport;
 import org.junit.jupiter.api.Test;
@@ -22,6 +25,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+
+import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -54,6 +59,9 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
 
     @MockitoBean
     private FindGameUserByUserAndGameUseCase findGameUserByUserAndGameUseCase;
+
+    @MockitoBean
+    private SearchGameUsersUseCase searchGameUsersUseCase;
 
     @Test
     void 존재하는_게임_프로필을_조회하면_공개_응답을_반환한다() throws Exception {
@@ -177,5 +185,58 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GAME_USER_001"));
+    }
+
+
+    @Test
+    void 인증된_사용자가_닉네임으로_게임_프로필을_검색하면_200_응답을_반환한다() throws Exception {
+
+
+        GameUserProfile profile = new GameUserProfile(
+                1L,
+                "playerA",
+                Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol"),
+                3L
+        );
+
+        SearchGameUsersQuery query = SearchGameUsersQuery.of(
+                "player",
+                null,
+                1,
+                10
+        );
+
+        // given
+        SearchGameUsersResult result = new SearchGameUsersResult(
+                1L,
+                List.of(profile)
+        );
+
+
+        given(searchGameUsersUseCase.searchGameUsers(query))
+                .willReturn(result);
+
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "player")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalCount").value(1))
+                .andExpect(jsonPath("$.data.gameUsers[0].id").value(1))
+                .andExpect(jsonPath("$.data.gameUsers[0].nickname").value("playerA"))
+                .andExpect(jsonPath("$.data.gameUsers[0].game.id").value(2))
+                .andExpect(jsonPath("$.data.gameUsers[0].user.id").value(3));
+    }
+
+    @Test
+    void 토큰_없이_게임_프로필을_검색하면_401_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "player")
+                        .accept(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
     }
 }

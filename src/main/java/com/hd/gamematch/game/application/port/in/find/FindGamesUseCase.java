@@ -1,4 +1,4 @@
-package com.hd.gamematch.game.application.port.in;
+package com.hd.gamematch.game.application.port.in.find;
 
 
 import com.hd.gamematch.game.domain.Game;
@@ -9,4 +9,3 @@ import java.util.List;
 public interface FindGamesUseCase {
     List<Game> findGames(FindGamesQuery query);
 }
-        

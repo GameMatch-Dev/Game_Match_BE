@@ -1,6 +1,6 @@
 package com.hd.gamematch.game.application.service;
 
-import com.hd.gamematch.game.application.port.in.FindGameQuery;
+import com.hd.gamematch.game.application.port.in.find.FindGameQuery;
 import com.hd.gamematch.game.application.port.out.LoadGamePort;
 import com.hd.gamematch.game.application.exception.GameNotFoundException;
 import com.hd.gamematch.game.domain.Game;
