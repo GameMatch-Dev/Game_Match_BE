@@ -272,4 +272,44 @@ class GameUserPersistenceAdapterIntegrationTest {
         assertThat(profiles).isEmpty();
         assertThat(totalCount).isZero();
     }
+
+    @Test
+    void 닉네임과_ID_오름차순으로_정렬한_두번째_페이지를_조회한다() {
+        // given: 대소문자만 다른 닉네임은 ID로, 그 외에는 닉네임으로 순서를 결정한다.
+        GameJpaEntity firstGame = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        GameJpaEntity secondGame = gameJpaRepository.save(
+                GameJpaEntity.of("Valorant", "FPS", "https://example.com/valorant")
+        );
+        GameJpaEntity thirdGame = gameJpaRepository.save(
+                GameJpaEntity.of("Overwatch", "FPS", "https://example.com/overwatch")
+        );
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity thirdUser = userJpaRepository.save(UserJpaEntity.create());
+
+        GameUserJpaEntity firstProfile = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(firstUser.getId(), firstGame.getId(), "player")
+        );
+        GameUserJpaEntity secondProfile = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(secondUser.getId(), secondGame.getId(), "Player")
+        );
+        gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(thirdUser.getId(), thirdGame.getId(), "playerZ")
+        );
+
+        // when
+        List<GameUserProfile> profiles = gameUserPersistenceAdapter
+                .loadGameUsersByNicknamePrefix("PLAYER", null, 2, 1);
+        long totalCount = gameUserPersistenceAdapter
+                .countGameUsersByNicknamePrefix("PLAYER", null);
+
+        // then: 첫 두 행은 같은 대소문자 무시 닉네임이므로 ID가 작은 행이 먼저다.
+        assertThat(firstProfile.getId()).isLessThan(secondProfile.getId());
+        assertThat(profiles)
+                .extracting(GameUserProfile::id)
+                .containsExactly(secondProfile.getId());
+        assertThat(totalCount).isEqualTo(3L);
+    }
 }

@@ -268,4 +268,31 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.data.totalCount").value(0))
                 .andExpect(jsonPath("$.data.gameUsers.length()").value(0));
     }
+
+    @Test
+    void 페이지_정보를_전달해_검색하면_해당_페이지의_응답_순서를_보존한다() throws Exception {
+        // given: 전체 2건 중 두 번째 페이지(크기 1)에 해당하는 결과다.
+        GameUserProfile secondProfile = new GameUserProfile(
+                2L,
+                "playerB",
+                Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol"),
+                4L
+        );
+        SearchGameUsersQuery query = SearchGameUsersQuery.of("player", null, 2, 1);
+        given(searchGameUsersUseCase.searchGameUsers(query))
+                .willReturn(new SearchGameUsersResult(2L, List.of(secondProfile)));
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "player")
+                        .param("page", "2")
+                        .param("size", "1")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalCount").value(2))
+                .andExpect(jsonPath("$.data.gameUsers.length()").value(1))
+                .andExpect(jsonPath("$.data.gameUsers[0].id").value(2))
+                .andExpect(jsonPath("$.data.gameUsers[0].nickname").value("playerB"));
+    }
 }

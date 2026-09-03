@@ -425,4 +425,45 @@ class GameUserControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.totalCount").value(0))
                 .andExpect(jsonPath("$.data.gameUsers").isEmpty());
     }
+
+    @Test
+    void 인증된_사용자가_정렬된_검색_결과의_두번째_페이지를_조회한다() throws Exception {
+        // given
+        GameJpaEntity firstGame = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        GameJpaEntity secondGame = gameJpaRepository.save(
+                GameJpaEntity.of("Valorant", "FPS", "https://example.com/valorant")
+        );
+        GameJpaEntity thirdGame = gameJpaRepository.save(
+                GameJpaEntity.of("Overwatch", "FPS", "https://example.com/overwatch")
+        );
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity thirdUser = userJpaRepository.save(UserJpaEntity.create());
+        gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(firstUser.getId(), firstGame.getId(), "player")
+        );
+        GameUserJpaEntity secondProfile = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(secondUser.getId(), secondGame.getId(), "Player")
+        );
+        gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(thirdUser.getId(), thirdGame.getId(), "playerZ")
+        );
+        String accessToken = jwtTokenService.issueAccessToken(firstUser.getId()).value();
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "PLAYER")
+                        .param("page", "2")
+                        .param("size", "1")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.totalCount").value(3))
+                .andExpect(jsonPath("$.data.gameUsers.length()").value(1))
+                .andExpect(jsonPath("$.data.gameUsers[0].id").value(secondProfile.getId()))
+                .andExpect(jsonPath("$.data.gameUsers[0].nickname").value("Player"));
+    }
 }
