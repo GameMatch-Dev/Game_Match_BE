@@ -407,4 +407,22 @@ class GameUserControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.gameUsers[1].nickname").value("PlayerB"))
                 .andExpect(jsonPath("$.data.gameUsers[1].game.id").value(valorant.getId()));
     }
+
+    @Test
+    void 인증된_사용자가_일치하는_프로필이_없는_닉네임을_검색하면_빈_결과를_반환한다() throws Exception {
+        // given
+        UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
+        String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "unknown")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalCount").value(0))
+                .andExpect(jsonPath("$.data.gameUsers").isEmpty());
+    }
 }

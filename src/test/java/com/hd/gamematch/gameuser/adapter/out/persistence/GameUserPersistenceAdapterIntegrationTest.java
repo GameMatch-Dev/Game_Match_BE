@@ -259,4 +259,17 @@ class GameUserPersistenceAdapterIntegrationTest {
                 .containsExactly(leagueOfLegends.getId(), valorant.getId());
         assertThat(totalCount).isEqualTo(2L);
     }
+
+    @Test
+    void 일치하는_닉네임_접두사가_없으면_빈_목록과_0개를_반환한다() {
+        // when
+        List<GameUserProfile> profiles = gameUserPersistenceAdapter
+                .loadGameUsersByNicknamePrefix("unknown", null, 1, 10);
+        long totalCount = gameUserPersistenceAdapter
+                .countGameUsersByNicknamePrefix("unknown", null);
+
+        // then
+        assertThat(profiles).isEmpty();
+        assertThat(totalCount).isZero();
+    }
 }
