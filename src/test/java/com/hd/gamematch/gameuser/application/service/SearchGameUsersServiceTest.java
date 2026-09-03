@@ -97,4 +97,26 @@ class SearchGameUsersServiceTest {
         then(loadGameUsersPort).should()
                 .countGameUsersByNicknamePrefix("player", null);
     }
+
+    @Test
+    void 검색_결과가_없으면_빈_목록과_0_개를_반환한다() {
+        // given
+        SearchGameUsersQuery query = SearchGameUsersQuery.of("unknown", null, 1, 10);
+
+        given(loadGameUsersPort.loadGameUsersByNicknamePrefix("unknown", null, 1, 10))
+                .willReturn(List.of());
+        given(loadGameUsersPort.countGameUsersByNicknamePrefix("unknown", null))
+                .willReturn(0L);
+
+        // when
+        SearchGameUsersResult result = searchGameUsersService.searchGameUsers(query);
+
+        // then
+        assertThat(result.totalCount()).isZero();
+        assertThat(result.gameUsers()).isEmpty();
+        then(loadGameUsersPort).should()
+                .loadGameUsersByNicknamePrefix("unknown", null, 1, 10);
+        then(loadGameUsersPort).should()
+                .countGameUsersByNicknamePrefix("unknown", null);
+    }
 }
