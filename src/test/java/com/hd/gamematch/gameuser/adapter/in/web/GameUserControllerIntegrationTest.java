@@ -368,4 +368,43 @@ class GameUserControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.gameUsers[1].nickname").value("PlayerB"))
                 .andExpect(jsonPath("$.data.gameUsers[1].user.id").value(secondUser.getId()));
     }
+
+    @Test
+    void 인증된_사용자가_게임_조건_없이_모든_게임에서_프로필을_검색한다() throws Exception {
+        // given
+        GameJpaEntity leagueOfLegends = gameJpaRepository.save(
+                GameJpaEntity.of(
+                        "League of Legends",
+                        "MOBA",
+                        "https://example.com/lol"
+                )
+        );
+        GameJpaEntity valorant = gameJpaRepository.save(
+                GameJpaEntity.of(
+                        "Valorant",
+                        "FPS",
+                        "https://example.com/valorant"
+                )
+        );
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+        gameUserJpaRepository.saveAll(java.util.List.of(
+                GameUserJpaEntity.of(firstUser.getId(), leagueOfLegends.getId(), "playerA"),
+                GameUserJpaEntity.of(secondUser.getId(), valorant.getId(), "PlayerB")
+        ));
+        String accessToken = jwtTokenService.issueAccessToken(firstUser.getId()).value();
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "PLAYER")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.totalCount").value(2))
+                .andExpect(jsonPath("$.data.gameUsers[0].nickname").value("playerA"))
+                .andExpect(jsonPath("$.data.gameUsers[0].game.id").value(leagueOfLegends.getId()))
+                .andExpect(jsonPath("$.data.gameUsers[1].nickname").value("PlayerB"))
+                .andExpect(jsonPath("$.data.gameUsers[1].game.id").value(valorant.getId()));
+    }
 }
