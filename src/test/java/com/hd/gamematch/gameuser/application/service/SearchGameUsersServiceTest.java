@@ -61,4 +61,40 @@ class SearchGameUsersServiceTest {
         then(loadGameUsersPort).should()
                 .countGameUsersByNicknamePrefix("player", 2L);
     }
+
+    @Test
+    void 게임_조건이_없으면_null을_그대로_전달해_전체_게임에서_검색한다() {
+        // given
+        SearchGameUsersQuery query = SearchGameUsersQuery.of("player", null, 1, 10);
+        List<GameUserProfile> profiles = List.of(
+                new GameUserProfile(
+                        11L,
+                        "playerA",
+                        Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol"),
+                        3L
+                ),
+                new GameUserProfile(
+                        12L,
+                        "playerB",
+                        Game.of(4L, "Valorant", "FPS", "https://example.com/valorant"),
+                        5L
+                )
+        );
+
+        given(loadGameUsersPort.loadGameUsersByNicknamePrefix("player", null, 1, 10))
+                .willReturn(profiles);
+        given(loadGameUsersPort.countGameUsersByNicknamePrefix("player", null))
+                .willReturn(2L);
+
+        // when
+        SearchGameUsersResult result = searchGameUsersService.searchGameUsers(query);
+
+        // then
+        assertThat(result.totalCount()).isEqualTo(2L);
+        assertThat(result.gameUsers()).containsExactlyElementsOf(profiles);
+        then(loadGameUsersPort).should()
+                .loadGameUsersByNicknamePrefix("player", null, 1, 10);
+        then(loadGameUsersPort).should()
+                .countGameUsersByNicknamePrefix("player", null);
+    }
 }
