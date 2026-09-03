@@ -7,14 +7,12 @@ import com.hd.gamematch.game.adapter.out.persistence.GameJpaEntity;
 import com.hd.gamematch.game.adapter.out.persistence.GameJpaRepository;
 import com.hd.gamematch.gameuser.adapter.out.persistence.GameUserJpaEntity;
 import com.hd.gamematch.gameuser.adapter.out.persistence.GameUserJpaRepository;
-import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersUseCase;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -42,10 +40,6 @@ class GameUserControllerIntegrationTest {
 
     @Autowired
     private GameUserJpaRepository gameUserJpaRepository;
-
-    // 검색 Service 구현 전에도 실제 운영 SecurityConfig의 인증 경계를 검증하기 위한 대역이다.
-    @MockitoBean
-    private SearchGameUsersUseCase searchGameUsersUseCase;
 
     @Test
     void 게임_프로필_등록_요청이_성공하면_프로필을_생성한다() throws Exception {
@@ -338,5 +332,40 @@ class GameUserControllerIntegrationTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTH_401"));
+    }
+
+    @Test
+    void 인증된_사용자가_닉네임과_게임_조건으로_프로필을_검색한다() throws Exception {
+        // given
+        GameJpaEntity savedGame = gameJpaRepository.save(
+                GameJpaEntity.of(
+                        "League of Legends",
+                        "MOBA",
+                        "https://example.com/lol"
+                )
+        );
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+        gameUserJpaRepository.saveAll(java.util.List.of(
+                GameUserJpaEntity.of(firstUser.getId(), savedGame.getId(), "playerA"),
+                GameUserJpaEntity.of(secondUser.getId(), savedGame.getId(), "PlayerB")
+        ));
+        String accessToken = jwtTokenService.issueAccessToken(firstUser.getId()).value();
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "PLAYER")
+                        .param("gameId", String.valueOf(savedGame.getId()))
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalCount").value(2))
+                .andExpect(jsonPath("$.data.gameUsers[0].nickname").value("playerA"))
+                .andExpect(jsonPath("$.data.gameUsers[0].game.id").value(savedGame.getId()))
+                .andExpect(jsonPath("$.data.gameUsers[0].user.id").value(firstUser.getId()))
+                .andExpect(jsonPath("$.data.gameUsers[1].nickname").value("PlayerB"))
+                .andExpect(jsonPath("$.data.gameUsers[1].user.id").value(secondUser.getId()));
     }
 }
