@@ -5,6 +5,7 @@ import com.hd.gamematch.game.application.port.in.find.FindGameQuery;
 import com.hd.gamematch.game.application.port.in.find.FindGameUseCase;
 import com.hd.gamematch.game.application.port.in.find.FindGamesQuery;
 import com.hd.gamematch.game.application.port.in.find.FindGamesUseCase;
+import com.hd.gamematch.game.adapter.in.web.response.GameResponse;
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.global.response.CommonResponse;
 import lombok.RequiredArgsConstructor;

@@ -1,5 +1,6 @@
 package com.hd.gamematch.game.adapter.in.web;
 
+import com.hd.gamematch.game.adapter.in.web.response.GameResponse;
 import com.hd.gamematch.game.application.port.in.find.FindGameQuery;
 import com.hd.gamematch.game.application.port.in.find.FindGameUseCase;
 import com.hd.gamematch.game.application.port.in.find.FindGamesQuery;
