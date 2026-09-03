@@ -249,4 +249,23 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
     }
+
+    @Test
+    void 검색_결과가_없으면_200_응답과_빈_목록을_반환한다() throws Exception {
+        SearchGameUsersQuery query = SearchGameUsersQuery.of("unknown", null, 1, 10);
+        SearchGameUsersResult result = new SearchGameUsersResult(0L, List.of());
+
+        given(searchGameUsersUseCase.searchGameUsers(query))
+                .willReturn(result);
+
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "unknown")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalCount").value(0))
+                .andExpect(jsonPath("$.data.gameUsers.length()").value(0));
+    }
 }
