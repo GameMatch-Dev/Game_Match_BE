@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 
 // 모든 컨트롤러에서 올라온 예외를 한곳에서 HTTP 응답으로 바꾸는 전역 처리기다.
 // @RestControllerAdvice는 처리 결과를 화면이 아닌 JSON 본문으로 작성하게 한다.
@@ -15,6 +16,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<CommonResponse<Void>> handleMethodArgumentTypeMismatch(
             MethodArgumentTypeMismatchException exception
+    ) {
+        return ResponseEntity.status(CommonErrorCode.COMMON_400.status())
+                .body(new CommonResponse<>(
+                        false,
+                        CommonErrorCode.COMMON_400.code(),
+                        CommonErrorCode.COMMON_400.defaultMessage(),
+                        null
+                ));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<CommonResponse<Void>> handleMissingServletRequestParameter(
+            MissingServletRequestParameterException exception
     ) {
         return ResponseEntity.status(CommonErrorCode.COMMON_400.status())
                 .body(new CommonResponse<>(

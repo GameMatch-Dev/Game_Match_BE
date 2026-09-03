@@ -335,6 +335,22 @@ class GameUserControllerIntegrationTest {
     }
 
     @Test
+    void 인증됐지만_닉네임_파라미터가_없으면_공통_400_응답을_반환한다() throws Exception {
+        // given
+        UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
+        String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.message").value("잘못된 요청입니다."));
+    }
+
+    @Test
     void 인증된_사용자가_닉네임과_게임_조건으로_프로필을_검색한다() throws Exception {
         // given
         GameJpaEntity savedGame = gameJpaRepository.save(
