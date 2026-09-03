@@ -14,6 +14,8 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -191,5 +193,37 @@ class GameUserPersistenceAdapterIntegrationTest {
         var result = gameUserPersistenceAdapter.loadGameUserByUserIdAndGameId(999L, 10L);
 
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void 닉네임_접두사와_게임_조건으로_프로필_목록과_전체_개수를_조회한다() {
+        // given
+        GameJpaEntity leagueOfLegends = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        GameJpaEntity valorant = gameJpaRepository.save(
+                GameJpaEntity.of("Valorant", "FPS", "https://example.com/valorant")
+        );
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity thirdUser = userJpaRepository.save(UserJpaEntity.create());
+
+        gameUserJpaRepository.saveAll(List.of(
+                GameUserJpaEntity.of(firstUser.getId(), leagueOfLegends.getId(), "playerA"),
+                GameUserJpaEntity.of(secondUser.getId(), leagueOfLegends.getId(), "PlayerB"),
+                GameUserJpaEntity.of(thirdUser.getId(), valorant.getId(), "playerC")
+        ));
+
+        // when
+        List<GameUserProfile> profiles = gameUserPersistenceAdapter
+                .loadGameUsersByNicknamePrefix("PLAYER", leagueOfLegends.getId(), 1, 10);
+        long totalCount = gameUserPersistenceAdapter
+                .countGameUsersByNicknamePrefix("PLAYER", leagueOfLegends.getId());
+
+        // then
+        assertThat(profiles)
+                .extracting(GameUserProfile::nickname)
+                .containsExactly("playerA", "PlayerB");
+        assertThat(totalCount).isEqualTo(2L);
     }
 }

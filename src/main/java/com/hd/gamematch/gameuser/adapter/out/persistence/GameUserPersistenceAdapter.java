@@ -9,21 +9,25 @@ import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserNicknamePort
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUserByUserAndGamePort;
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUserPort;
+import com.hd.gamematch.gameuser.application.port.out.LoadGameUsersPort;
 import com.hd.gamematch.gameuser.application.port.out.SaveGameUserPort;
 import com.hd.gamematch.gameuser.domain.GameUser;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.hibernate.exception.ConstraintViolationException;
 
 import java.util.Locale;
+import java.util.List;
 
 
 @Component
 @RequiredArgsConstructor
 public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameUserPort, ExistsGameUserNicknamePort,
-        LoadGameUserPort, LoadGameUserByUserAndGamePort {
+        LoadGameUserPort, LoadGameUserByUserAndGamePort, LoadGameUsersPort {
 
     private static final String DUPLICATE_REGISTRATION_CONSTRAINT =
             "uk_game_user_user_id_game_id";
@@ -106,6 +110,26 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
     ) {
         return gameUserJpaRepository.findByUserIdAndGameId(userId, gameId)
                 .map(this::toGameUserProfile);
+    }
+
+    @Override
+    public List<GameUserProfile> loadGameUsersByNicknamePrefix(
+            String nickname,
+            Long gameId,
+            int page,
+            int size
+    ) {
+        Pageable pageable = PageRequest.of(page - 1, size);
+
+        return gameUserJpaRepository.findByNicknamePrefix(nickname, gameId, pageable)
+                .stream()
+                .map(this::toGameUserProfile)
+                .toList();
+    }
+
+    @Override
+    public long countGameUsersByNicknamePrefix(String nickname, Long gameId) {
+        return gameUserJpaRepository.countByNicknamePrefix(nickname, gameId);
     }
 
     private GameUserProfile toGameUserProfile(GameUserJpaEntity gameUser) {
