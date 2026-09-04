@@ -120,8 +120,9 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
             int size
     ) {
         Pageable pageable = PageRequest.of(page - 1, size);
+        String escapedNickname = escapeLikePattern(nickname);
 
-        return gameUserJpaRepository.findByNicknamePrefix(nickname, gameId, pageable)
+        return gameUserJpaRepository.findByNicknamePrefix(escapedNickname, gameId, pageable)
                 .stream()
                 .map(this::toGameUserProfile)
                 .toList();
@@ -129,7 +130,14 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
 
     @Override
     public long countGameUsersByNicknamePrefix(String nickname, Long gameId) {
-        return gameUserJpaRepository.countByNicknamePrefix(nickname, gameId);
+        return gameUserJpaRepository.countByNicknamePrefix(escapeLikePattern(nickname), gameId);
+    }
+
+    private String escapeLikePattern(String nickname) {
+        return nickname
+                .replace("\\", "\\\\")
+                .replace("%", "\\%")
+                .replace("_", "\\_");
     }
 
     private GameUserProfile toGameUserProfile(GameUserJpaEntity gameUser) {

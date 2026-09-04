@@ -148,6 +148,7 @@ class GameUserPersistenceAdapterIntegrationTest {
     void 같은_게임의_중복_닉네임을_데이터베이스가_거부한다() {
         // Given: 첫 사용자가 게임 10에서 playerA 닉네임을 사용 중이다.
         gameUserJpaRepository.saveAndFlush(
+        
                 GameUserJpaEntity.of(1L, 10L, "playerA")
         );
 
@@ -207,11 +208,13 @@ class GameUserPersistenceAdapterIntegrationTest {
         UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
         UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
         UserJpaEntity thirdUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity fourthUser = userJpaRepository.save(UserJpaEntity.create());
 
         gameUserJpaRepository.saveAll(List.of(
                 GameUserJpaEntity.of(firstUser.getId(), leagueOfLegends.getId(), "playerA"),
                 GameUserJpaEntity.of(secondUser.getId(), leagueOfLegends.getId(), "PlayerB"),
-                GameUserJpaEntity.of(thirdUser.getId(), valorant.getId(), "playerC")
+                GameUserJpaEntity.of(thirdUser.getId(), valorant.getId(), "playerC"),
+                GameUserJpaEntity.of(fourthUser.getId(), leagueOfLegends.getId(), "proplayer")
         ));
 
         // when
@@ -225,6 +228,60 @@ class GameUserPersistenceAdapterIntegrationTest {
                 .extracting(GameUserProfile::nickname)
                 .containsExactly("playerA", "PlayerB");
         assertThat(totalCount).isEqualTo(2L);
+    }
+
+    @Test
+    void LIKE_특수문자가_포함된_닉네임_접두사는_문자_그대로_검색한다() {
+        // given
+        GameJpaEntity game = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        UserJpaEntity literalPrefixUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity wildcardCandidateUser = userJpaRepository.save(UserJpaEntity.create());
+
+        gameUserJpaRepository.saveAll(List.of(
+                GameUserJpaEntity.of(literalPrefixUser.getId(), game.getId(), "player_1"),
+                GameUserJpaEntity.of(wildcardCandidateUser.getId(), game.getId(), "playerA1")
+        ));
+
+        // when
+        List<GameUserProfile> profiles = gameUserPersistenceAdapter
+                .loadGameUsersByNicknamePrefix("player_", game.getId(), 1, 10);
+        long totalCount = gameUserPersistenceAdapter
+                .countGameUsersByNicknamePrefix("player_", game.getId());
+
+        // then: '_'는 임의 한 글자가 아니라 닉네임의 실제 문자다.
+        assertThat(profiles)
+                .extracting(GameUserProfile::nickname)
+                .containsExactly("player_1");
+        assertThat(totalCount).isEqualTo(1L);
+    }
+
+    @Test
+    void 퍼센트가_포함된_닉네임_접두사는_문자_그대로_검색한다() {
+        // given
+        GameJpaEntity game = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        UserJpaEntity literalPrefixUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity wildcardCandidateUser = userJpaRepository.save(UserJpaEntity.create());
+
+        gameUserJpaRepository.saveAll(List.of(
+                GameUserJpaEntity.of(literalPrefixUser.getId(), game.getId(), "player%1"),
+                GameUserJpaEntity.of(wildcardCandidateUser.getId(), game.getId(), "playerA1")
+        ));
+
+        // when
+        List<GameUserProfile> profiles = gameUserPersistenceAdapter
+                .loadGameUsersByNicknamePrefix("player%", game.getId(), 1, 10);
+        long totalCount = gameUserPersistenceAdapter
+                .countGameUsersByNicknamePrefix("player%", game.getId());
+
+        // then: '%'는 임의 길이 문자열이 아니라 닉네임의 실제 문자다.
+        assertThat(profiles)
+                .extracting(GameUserProfile::nickname)
+                .containsExactly("player%1");
+        assertThat(totalCount).isEqualTo(1L);
     }
 
     @Test

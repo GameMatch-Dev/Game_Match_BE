@@ -20,7 +20,7 @@ public interface GameUserJpaRepository
     @Query("""
             select gameUser
             from GameUserJpaEntity gameUser
-            where lower(gameUser.nickname) like lower(concat(:nickname, '%'))
+            where lower(gameUser.nickname) like lower(concat(:nickname, '%')) escape '\\'
               and (:gameId is null or gameUser.gameId = :gameId)
             order by lower(gameUser.nickname) asc, gameUser.id asc
             """)
@@ -33,7 +33,7 @@ public interface GameUserJpaRepository
     @Query("""
             select count(gameUser)
             from GameUserJpaEntity gameUser
-            where lower(gameUser.nickname) like lower(concat(:nickname, '%'))
+            where lower(gameUser.nickname) like lower(concat(:nickname, '%')) escape '\\'
               and (:gameId is null or gameUser.gameId = :gameId)
             """)
     long countByNicknamePrefix(
