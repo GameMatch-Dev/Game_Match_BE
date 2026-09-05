@@ -295,6 +295,33 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
+    void 백슬래시가_포함된_닉네임_접두사는_문자_그대로_검색한다() {
+        // given: Java 문자열의 \\는 실제 닉네임의 백슬래시 한 글자를 뜻한다.
+        GameJpaEntity game = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        UserJpaEntity literalPrefixUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity nonMatchingUser = userJpaRepository.save(UserJpaEntity.create());
+
+        gameUserJpaRepository.saveAll(List.of(
+                GameUserJpaEntity.of(literalPrefixUser.getId(), game.getId(), "player\\one"),
+                GameUserJpaEntity.of(nonMatchingUser.getId(), game.getId(), "playerXone")
+        ));
+
+        // when
+        List<GameUserProfile> profiles = gameUserPersistenceAdapter
+                .loadGameUsersByNicknamePrefix("player\\", game.getId(), 1, 10);
+        long totalCount = gameUserPersistenceAdapter
+                .countGameUsersByNicknamePrefix("player\\", game.getId());
+
+        // then: '\\'는 LIKE 이스케이프 문자로 소비되지 않고 닉네임의 실제 문자다.
+        assertThat(profiles)
+                .extracting(GameUserProfile::nickname)
+                .containsExactly("player\\one");
+        assertThat(totalCount).isEqualTo(1L);
+    }
+
+    @Test
     void 검색_목록을_조회할_때_프로필마다_추가_쿼리를_실행하지_않는다() {
         // given
         // 서로 다른 Game/User를 연결해야 각 프로필이 별도의 연관 데이터를 요구하는 상황을 재현한다.
