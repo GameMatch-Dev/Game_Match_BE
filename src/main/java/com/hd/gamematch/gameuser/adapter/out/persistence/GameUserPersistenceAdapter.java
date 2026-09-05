@@ -1,8 +1,11 @@
 package com.hd.gamematch.gameuser.adapter.out.persistence;
 
 import com.hd.gamematch.auth.adapter.out.persistence.UserJpaRepository;
+import com.hd.gamematch.auth.adapter.out.persistence.UserJpaEntity;
+import com.hd.gamematch.game.adapter.out.persistence.GameJpaEntity;
 import com.hd.gamematch.game.adapter.out.persistence.GameJpaRepository;
 import com.hd.gamematch.game.adapter.out.persistence.GamePersistenceMapper;
+import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegisteredException;
 import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserNicknamePort;
@@ -22,6 +25,9 @@ import org.hibernate.exception.ConstraintViolationException;
 
 import java.util.Locale;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 
 @Component
@@ -122,10 +128,10 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
         Pageable pageable = PageRequest.of(page - 1, size);
         String escapedNickname = escapeLikePattern(nickname);
 
-        return gameUserJpaRepository.findByNicknamePrefix(escapedNickname, gameId, pageable)
-                .stream()
-                .map(this::toGameUserProfile)
-                .toList();
+        List<GameUserJpaEntity> gameUsers = gameUserJpaRepository
+                .findByNicknamePrefix(escapedNickname, gameId, pageable);
+
+        return toGameUserProfiles(gameUsers);
     }
 
     @Override
@@ -140,6 +146,29 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
                 .replace("_", "\\_");
     }
 
+    private List<GameUserProfile> toGameUserProfiles(List<GameUserJpaEntity> gameUsers) {
+        Set<Long> gameIds = gameUsers.stream()
+                .map(GameUserJpaEntity::getGameId)
+                .collect(Collectors.toSet());
+        Set<Long> userIds = gameUsers.stream()
+                .map(GameUserJpaEntity::getUserId)
+                .collect(Collectors.toSet());
+
+        Map<Long, Game> gamesById = gameJpaRepository.findAllById(gameIds).stream()
+                .collect(Collectors.toMap(
+                        GameJpaEntity::getId,
+                        GamePersistenceMapper::toDomain
+                ));
+        Set<Long> existingUserIds = userJpaRepository.findAllById(userIds).stream()
+                .map(UserJpaEntity::getId)
+                .collect(Collectors.toSet());
+
+        // findAllById()의 반환 순서에 의존하지 않고, 검색 쿼리가 만든 페이지 순서를 유지한다.
+        return gameUsers.stream()
+                .map(gameUser -> toGameUserProfile(gameUser, gamesById, existingUserIds))
+                .toList();
+    }
+
     private GameUserProfile toGameUserProfile(GameUserJpaEntity gameUser) {
         // 프로필 행은 존재하지만 연결된 게임·사용자가 없다면 데이터 정합성 오류다.
         // 업무상 "프로필 없음"(404)으로 숨기지 않고 서버 오류로 드러낸다.
@@ -148,6 +177,28 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
                 .orElseThrow(() -> new IllegalStateException("게임 프로필의 연결 게임이 존재하지 않습니다."));
 
         if (!userJpaRepository.existsById(gameUser.getUserId())) {
+            throw new IllegalStateException("게임 프로필의 연결 사용자가 존재하지 않습니다.");
+        }
+
+        return new GameUserProfile(
+                gameUser.getId(),
+                gameUser.getNickname(),
+                game,
+                gameUser.getUserId()
+        );
+    }
+
+    private GameUserProfile toGameUserProfile(
+            GameUserJpaEntity gameUser,
+            Map<Long, Game> gamesById,
+            Set<Long> existingUserIds
+    ) {
+        Game game = gamesById.get(gameUser.getGameId());
+        if (game == null) {
+            throw new IllegalStateException("게임 프로필의 연결 게임이 존재하지 않습니다.");
+        }
+
+        if (!existingUserIds.contains(gameUser.getUserId())) {
             throw new IllegalStateException("게임 프로필의 연결 사용자가 존재하지 않습니다.");
         }
 

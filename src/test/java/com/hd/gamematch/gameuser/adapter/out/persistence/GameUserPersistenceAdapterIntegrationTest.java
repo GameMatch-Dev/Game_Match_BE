@@ -8,7 +8,11 @@ import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegistered
 import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.gameuser.domain.GameUser;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import org.junit.jupiter.api.Test;
+import org.hibernate.SessionFactory;
+import org.hibernate.stat.Statistics;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.context.annotation.Import;
@@ -34,6 +38,12 @@ class GameUserPersistenceAdapterIntegrationTest {
 
     @Autowired
     private GameJpaRepository gameJpaRepository;
+
+    @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
 
     @Test
     void 게임_프로필을_저장한다() {
@@ -282,6 +292,78 @@ class GameUserPersistenceAdapterIntegrationTest {
                 .extracting(GameUserProfile::nickname)
                 .containsExactly("player%1");
         assertThat(totalCount).isEqualTo(1L);
+    }
+
+    @Test
+    void 검색_목록을_조회할_때_프로필마다_추가_쿼리를_실행하지_않는다() {
+        // given
+        // 서로 다른 Game/User를 연결해야 각 프로필이 별도의 연관 데이터를 요구하는 상황을 재현한다.
+        GameJpaEntity firstGame = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        GameJpaEntity secondGame = gameJpaRepository.save(
+                GameJpaEntity.of("Valorant", "FPS", "https://example.com/valorant")
+        );
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+        gameUserJpaRepository.saveAll(List.of(
+                GameUserJpaEntity.of(firstUser.getId(), firstGame.getId(), "playerA"),
+                GameUserJpaEntity.of(secondUser.getId(), secondGame.getId(), "playerB")
+        ));
+
+        // fixture 저장 INSERT를 먼저 끝내고, 1차 캐시를 비워 검색 시 실제 SELECT가 실행되게 한다.
+        entityManager.flush();
+        entityManager.clear();
+
+        // Hibernate Statistics에는 setup 쿼리도 기록되므로, 검색 직전에 카운터를 초기화한다.
+        Statistics statistics = entityManagerFactory
+                .unwrap(SessionFactory.class)
+                .getStatistics();
+        statistics.setStatisticsEnabled(true);
+        statistics.clear();
+
+        // when
+        // HTTP 계층이 아니라 N+1이 발생하는 Persistence Adapter의 목록 조회만 직접 측정한다.
+        List<GameUserProfile> profiles = gameUserPersistenceAdapter
+                .loadGameUsersByNicknamePrefix("player", null, 1, 10);
+
+        // 결과가 실제로 2건이어야 쿼리가 적게 실행돼도 통과하는 거짓 양성을 막을 수 있다.
+        assertThat(profiles).hasSize(2);
+
+        // 목록 1회 + Game 일괄 조회 1회 + User 일괄 조회 1회를 넘으면 N+1 회귀로 본다.
+        assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(3L);
+    }
+
+    @Test
+    void 검색_목록의_프로필에_연결된_게임이_없으면_정합성_오류를_던진다() {
+        // given: game_user에는 행이 있지만 game_id가 가리키는 Game 행은 없다.
+        UserJpaEntity user = userJpaRepository.save(UserJpaEntity.create());
+        gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(user.getId(), 999_999L, "playerA")
+        );
+
+        // when & then
+        assertThatThrownBy(() -> gameUserPersistenceAdapter
+                .loadGameUsersByNicknamePrefix("player", null, 1, 10))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("게임 프로필의 연결 게임이 존재하지 않습니다.");
+    }
+
+    @Test
+    void 검색_목록의_프로필에_연결된_사용자가_없으면_정합성_오류를_던진다() {
+        // given: game_user에는 행이 있지만 user_id가 가리키는 User 행은 없다.
+        GameJpaEntity game = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(999_999L, game.getId(), "playerA")
+        );
+
+        // when & then
+        assertThatThrownBy(() -> gameUserPersistenceAdapter
+                .loadGameUsersByNicknamePrefix("player", null, 1, 10))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("게임 프로필의 연결 사용자가 존재하지 않습니다.");
     }
 
     @Test
