@@ -1,6 +1,6 @@
-package com.hd.gamematch.gameuser.adapter.in.web;
+package com.hd.gamematch.gameuser.adapter.in.web.response;
 
-import com.hd.gamematch.game.adapter.in.web.GameResponse;
+import com.hd.gamematch.game.adapter.in.web.response.GameResponse;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 
 /**

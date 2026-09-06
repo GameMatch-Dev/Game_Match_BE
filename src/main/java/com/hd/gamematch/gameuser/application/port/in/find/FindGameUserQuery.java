@@ -1,4 +1,4 @@
-package com.hd.gamematch.gameuser.application.port.in;
+package com.hd.gamematch.gameuser.application.port.in.find;
 
 /**
  * 게임 프로필 단건 조회에 필요한 입력값과 최소 유효성 규칙을 묶는다.

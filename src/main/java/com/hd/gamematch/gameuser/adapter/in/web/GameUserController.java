@@ -1,21 +1,28 @@
 package com.hd.gamematch.gameuser.adapter.in.web;
 
-import com.hd.gamematch.game.application.port.in.FindGameQuery;
-import com.hd.gamematch.game.application.port.in.FindGameUseCase;
+import com.hd.gamematch.game.application.port.in.find.FindGameQuery;
+import com.hd.gamematch.game.application.port.in.find.FindGameUseCase;
 import com.hd.gamematch.game.domain.Game;
-import com.hd.gamematch.gameuser.application.port.in.*;
+import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserQuery;
+import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.findmyprofile.FindGameUserByUserAndGameQuery;
+import com.hd.gamematch.gameuser.application.port.in.findmyprofile.FindGameUserByUserAndGameUseCase;
+import com.hd.gamematch.gameuser.application.port.in.register.RegisterGameUserCommand;
+import com.hd.gamematch.gameuser.application.port.in.register.RegisterGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersQuery;
+import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersResult;
+import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersUseCase;
+import com.hd.gamematch.gameuser.adapter.in.web.request.RegisterGameUserRequest;
+import com.hd.gamematch.gameuser.adapter.in.web.response.FindGameUserResponse;
+import com.hd.gamematch.gameuser.adapter.in.web.response.RegisterGameUserResponse;
+import com.hd.gamematch.gameuser.adapter.in.web.response.SearchGameUsersResponse;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.global.response.CommonResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 게임 프로필 등록 HTTP 요청의 진입점이다.
@@ -35,6 +42,8 @@ public class GameUserController {
     private final FindGameUserUseCase findGameUserUseCase;
 
     private final FindGameUserByUserAndGameUseCase findGameUserByUserAndGameUseCase;
+
+    private final SearchGameUsersUseCase searchGameUsersUseCase;
 
     @GetMapping("/{gameUserId}")
     public ResponseEntity<CommonResponse<FindGameUserResponse>> getGameUserProfile(
@@ -98,6 +107,22 @@ public class GameUserController {
 
         return ResponseEntity.ok(
                 CommonResponse.success(FindGameUserResponse.from(gameUserProfile))
+        );
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<CommonResponse<SearchGameUsersResponse>> searchGameUsers(
+            @RequestParam String nickname,
+            @RequestParam(required = false) Long gameId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        SearchGameUsersResult result = searchGameUsersUseCase.searchGameUsers(
+                SearchGameUsersQuery.of(nickname, gameId, page, size)
+        );
+
+        return ResponseEntity.ok(
+                CommonResponse.success(SearchGameUsersResponse.from(result))
         );
     }
 }

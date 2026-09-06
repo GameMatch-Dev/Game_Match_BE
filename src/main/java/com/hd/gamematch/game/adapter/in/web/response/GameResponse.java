@@ -1,4 +1,4 @@
-package com.hd.gamematch.game.adapter.in.web;
+package com.hd.gamematch.game.adapter.in.web.response;
 
 import com.hd.gamematch.game.domain.Game;
 

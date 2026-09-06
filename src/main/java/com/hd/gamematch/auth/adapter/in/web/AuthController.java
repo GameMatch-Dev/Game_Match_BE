@@ -2,6 +2,9 @@ package com.hd.gamematch.auth.adapter.in.web;
 
 import com.hd.gamematch.auth.application.service.AuthService;
 import com.hd.gamematch.auth.application.exception.InvalidAuthRequestException;
+import com.hd.gamematch.auth.adapter.in.web.request.LoginTicketRequest;
+import com.hd.gamematch.auth.adapter.in.web.response.CurrentUserResponse;
+import com.hd.gamematch.auth.adapter.in.web.response.TokenResponse;
 import com.hd.gamematch.auth.security.JwtTokenService;
 import com.hd.gamematch.global.response.CommonResponse;
 import lombok.RequiredArgsConstructor;
@@ -54,12 +57,4 @@ public class AuthController {
         return CommonResponse.success(new CurrentUserResponse(userId));
     }
 
-    public record LoginTicketRequest(String ticket) {
-    }
-
-    public record TokenResponse(String accessToken, String tokenType, long expiresInSeconds) {
-    }
-
-    public record CurrentUserResponse(Long userId) {
-    }
 }

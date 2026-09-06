@@ -324,4 +324,162 @@ class GameUserControllerIntegrationTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("AUTH_401"));
     }
+
+    @Test
+    void 토큰_없이_게임_프로필을_검색하면_401_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "player")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+    }
+
+    @Test
+    void 인증됐지만_닉네임_파라미터가_없으면_공통_400_응답을_반환한다() throws Exception {
+        // given
+        UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
+        String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.message").value("잘못된 요청입니다."));
+    }
+
+    @Test
+    void 인증된_사용자가_닉네임과_게임_조건으로_프로필을_검색한다() throws Exception {
+        // given
+        GameJpaEntity savedGame = gameJpaRepository.save(
+                GameJpaEntity.of(
+                        "League of Legends",
+                        "MOBA",
+                        "https://example.com/lol"
+                )
+        );
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+        gameUserJpaRepository.saveAll(java.util.List.of(
+                GameUserJpaEntity.of(firstUser.getId(), savedGame.getId(), "playerA"),
+                GameUserJpaEntity.of(secondUser.getId(), savedGame.getId(), "PlayerB")
+        ));
+        String accessToken = jwtTokenService.issueAccessToken(firstUser.getId()).value();
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "PLAYER")
+                        .param("gameId", String.valueOf(savedGame.getId()))
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalCount").value(2))
+                .andExpect(jsonPath("$.data.gameUsers[0].nickname").value("playerA"))
+                .andExpect(jsonPath("$.data.gameUsers[0].game.id").value(savedGame.getId()))
+                .andExpect(jsonPath("$.data.gameUsers[0].user.id").value(firstUser.getId()))
+                .andExpect(jsonPath("$.data.gameUsers[1].nickname").value("PlayerB"))
+                .andExpect(jsonPath("$.data.gameUsers[1].user.id").value(secondUser.getId()));
+    }
+
+    @Test
+    void 인증된_사용자가_게임_조건_없이_모든_게임에서_프로필을_검색한다() throws Exception {
+        // given
+        GameJpaEntity leagueOfLegends = gameJpaRepository.save(
+                GameJpaEntity.of(
+                        "League of Legends",
+                        "MOBA",
+                        "https://example.com/lol"
+                )
+        );
+        GameJpaEntity valorant = gameJpaRepository.save(
+                GameJpaEntity.of(
+                        "Valorant",
+                        "FPS",
+                        "https://example.com/valorant"
+                )
+        );
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+        gameUserJpaRepository.saveAll(java.util.List.of(
+                GameUserJpaEntity.of(firstUser.getId(), leagueOfLegends.getId(), "playerA"),
+                GameUserJpaEntity.of(secondUser.getId(), valorant.getId(), "PlayerB")
+        ));
+        String accessToken = jwtTokenService.issueAccessToken(firstUser.getId()).value();
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "PLAYER")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.totalCount").value(2))
+                .andExpect(jsonPath("$.data.gameUsers[0].nickname").value("playerA"))
+                .andExpect(jsonPath("$.data.gameUsers[0].game.id").value(leagueOfLegends.getId()))
+                .andExpect(jsonPath("$.data.gameUsers[1].nickname").value("PlayerB"))
+                .andExpect(jsonPath("$.data.gameUsers[1].game.id").value(valorant.getId()));
+    }
+
+    @Test
+    void 인증된_사용자가_일치하는_프로필이_없는_닉네임을_검색하면_빈_결과를_반환한다() throws Exception {
+        // given
+        UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
+        String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "unknown")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalCount").value(0))
+                .andExpect(jsonPath("$.data.gameUsers").isEmpty());
+    }
+
+    @Test
+    void 인증된_사용자가_정렬된_검색_결과의_두번째_페이지를_조회한다() throws Exception {
+        // given
+        GameJpaEntity firstGame = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        GameJpaEntity secondGame = gameJpaRepository.save(
+                GameJpaEntity.of("Valorant", "FPS", "https://example.com/valorant")
+        );
+        GameJpaEntity thirdGame = gameJpaRepository.save(
+                GameJpaEntity.of("Overwatch", "FPS", "https://example.com/overwatch")
+        );
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity thirdUser = userJpaRepository.save(UserJpaEntity.create());
+        gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(firstUser.getId(), firstGame.getId(), "player")
+        );
+        GameUserJpaEntity secondProfile = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(secondUser.getId(), secondGame.getId(), "Player")
+        );
+        gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(thirdUser.getId(), thirdGame.getId(), "playerZ")
+        );
+        String accessToken = jwtTokenService.issueAccessToken(firstUser.getId()).value();
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "PLAYER")
+                        .param("page", "2")
+                        .param("size", "1")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.totalCount").value(3))
+                .andExpect(jsonPath("$.data.gameUsers.length()").value(1))
+                .andExpect(jsonPath("$.data.gameUsers[0].id").value(secondProfile.getId()))
+                .andExpect(jsonPath("$.data.gameUsers[0].nickname").value("Player"));
+    }
 }

@@ -73,6 +73,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/auth/token").permitAll()
                         // 기존 게임 조회 계약은 이번 최소 인증 작업에서도 공개 API로 유지한다.
                         .requestMatchers(HttpMethod.GET, "/games", "/games/**").permitAll()
+                        // 검색은 사용자 인증이 필요하다. 아래 공개 상세 조회 패턴보다 먼저 둬야 한다.
+                        .requestMatchers(HttpMethod.GET, "/game-users/search").authenticated()
                         // 게임 프로필 상세는 공개 정보만 반환하므로 토큰 없이 조회할 수 있다.
                         // POST /game-users는 이 규칙에 해당하지 않아 계속 인증이 필요하다.
                         .requestMatchers(HttpMethod.GET, "/game-users/*").permitAll()

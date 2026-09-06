@@ -1,7 +1,7 @@
 package com.hd.gamematch.gameuser.application.service;
 
 import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
-import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserCommand;
+import com.hd.gamematch.gameuser.application.port.in.register.RegisterGameUserCommand;
 import com.hd.gamematch.gameuser.application.exception.GameUserAlreadyRegisteredException;
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserNicknamePort;
 import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserPort;

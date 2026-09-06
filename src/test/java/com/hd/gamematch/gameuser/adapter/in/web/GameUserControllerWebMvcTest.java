@@ -4,16 +4,22 @@ import com.hd.gamematch.game.adapter.in.web.exception.GameExceptionHandler;
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.gameuser.adapter.in.web.exception.GameUserExceptionHandler;
 import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserByUserAndGameQuery;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserByUserAndGameUseCase;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserQuery;
-import com.hd.gamematch.gameuser.application.port.in.FindGameUserUseCase;
-import com.hd.gamematch.gameuser.application.port.in.RegisterGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserQuery;
+import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.findmyprofile.FindGameUserByUserAndGameQuery;
+import com.hd.gamematch.gameuser.application.port.in.findmyprofile.FindGameUserByUserAndGameUseCase;
+import com.hd.gamematch.gameuser.application.port.in.register.RegisterGameUserUseCase;
+import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersQuery;
+import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersResult;
+import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersUseCase;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
-import com.hd.gamematch.game.application.port.in.FindGameUseCase;
+import com.hd.gamematch.game.application.port.in.find.FindGameUseCase;
 import com.hd.gamematch.global.exception.GlobalExceptionHandler;
 import com.hd.gamematch.support.security.SecuredWebMvcTestSupport;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.context.annotation.Import;
@@ -22,6 +28,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+
+import java.util.List;
+import java.util.stream.Stream;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
@@ -54,6 +63,9 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
 
     @MockitoBean
     private FindGameUserByUserAndGameUseCase findGameUserByUserAndGameUseCase;
+
+    @MockitoBean
+    private SearchGameUsersUseCase searchGameUsersUseCase;
 
     @Test
     void 존재하는_게임_프로필을_조회하면_공개_응답을_반환한다() throws Exception {
@@ -177,5 +189,158 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GAME_USER_001"));
+    }
+
+
+    @Test
+    void 인증된_사용자가_닉네임으로_게임_프로필을_검색하면_200_응답을_반환한다() throws Exception {
+
+
+        GameUserProfile profile = new GameUserProfile(
+                1L,
+                "playerA",
+                Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol"),
+                3L
+        );
+
+        SearchGameUsersQuery query = SearchGameUsersQuery.of(
+                "player",
+                null,
+                1,
+                10
+        );
+
+        // given
+        SearchGameUsersResult result = new SearchGameUsersResult(
+                1L,
+                List.of(profile)
+        );
+
+
+        given(searchGameUsersUseCase.searchGameUsers(query))
+                .willReturn(result);
+
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "player")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalCount").value(1))
+                .andExpect(jsonPath("$.data.gameUsers[0].id").value(1))
+                .andExpect(jsonPath("$.data.gameUsers[0].nickname").value("playerA"))
+                .andExpect(jsonPath("$.data.gameUsers[0].game.id").value(2))
+                .andExpect(jsonPath("$.data.gameUsers[0].user.id").value(3));
+    }
+
+    @Test
+    void 토큰_없이_게임_프로필을_검색하면_401_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "player")
+                        .accept(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+    }
+
+    @Test
+    void 닉네임이_공백이면_게임_프로필_검색에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", " ")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    @Test
+    void 닉네임_파라미터가_없으면_게임_프로필_검색에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/search")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    @Test
+    void 닉네임이_한_글자면_게임_프로필_검색에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "p")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    @Test
+    void 검색_결과가_없으면_200_응답과_빈_목록을_반환한다() throws Exception {
+        SearchGameUsersQuery query = SearchGameUsersQuery.of("unknown", null, 1, 10);
+        SearchGameUsersResult result = new SearchGameUsersResult(0L, List.of());
+
+        given(searchGameUsersUseCase.searchGameUsers(query))
+                .willReturn(result);
+
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "unknown")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.totalCount").value(0))
+                .andExpect(jsonPath("$.data.gameUsers.length()").value(0));
+    }
+
+    @Test
+    void 페이지_정보를_전달해_검색하면_해당_페이지의_응답_순서를_보존한다() throws Exception {
+        // given: 전체 2건 중 두 번째 페이지(크기 1)에 해당하는 결과다.
+        GameUserProfile secondProfile = new GameUserProfile(
+                2L,
+                "playerB",
+                Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol"),
+                4L
+        );
+        SearchGameUsersQuery query = SearchGameUsersQuery.of("player", null, 2, 1);
+        given(searchGameUsersUseCase.searchGameUsers(query))
+                .willReturn(new SearchGameUsersResult(2L, List.of(secondProfile)));
+
+        // when & then
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "player")
+                        .param("page", "2")
+                        .param("size", "1")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalCount").value(2))
+                .andExpect(jsonPath("$.data.gameUsers.length()").value(1))
+                .andExpect(jsonPath("$.data.gameUsers[0].id").value(2))
+                .andExpect(jsonPath("$.data.gameUsers[0].nickname").value("playerB"));
+    }
+
+    @ParameterizedTest(name = "{0}={1}이면 400 응답을 반환한다")
+    @MethodSource("잘못된_검색_조건")
+    void 잘못된_검색_조건이면_400_응답을_반환한다(String parameterName, String parameterValue)
+            throws Exception {
+        mockMvc.perform(get("/game-users/search")
+                        .param("nickname", "player")
+                        .param(parameterName, parameterValue)
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    private static Stream<Arguments> 잘못된_검색_조건() {
+        return Stream.of(
+                Arguments.of("gameId", "0"),
+                Arguments.of("page", "0"),
+                Arguments.of("size", "0"),
+                Arguments.of("size", "21")
+        );
     }
 }

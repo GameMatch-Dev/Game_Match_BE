@@ -1,4 +1,4 @@
-package com.hd.gamematch.game.application.port.in;
+package com.hd.gamematch.game.application.port.in.find;
 
 import org.junit.jupiter.api.Test;
 

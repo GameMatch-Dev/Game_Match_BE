@@ -1,4 +1,4 @@
-package com.hd.gamematch.gameuser.application.port.in;
+package com.hd.gamematch.gameuser.application.port.in.findmyprofile;
 
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 
