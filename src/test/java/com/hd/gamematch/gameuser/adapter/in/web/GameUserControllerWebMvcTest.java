@@ -12,6 +12,8 @@ import com.hd.gamematch.gameuser.application.port.in.register.RegisterGameUserUs
 import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersQuery;
 import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersResult;
 import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersUseCase;
+import com.hd.gamematch.gameuser.application.port.in.update.UpdateGameUserNicknameCommand;
+import com.hd.gamematch.gameuser.application.port.in.update.UpdateGameUserNicknameUseCase;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.game.application.port.in.find.FindGameUseCase;
 import com.hd.gamematch.global.exception.GlobalExceptionHandler;
@@ -37,6 +39,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.never;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -66,6 +69,9 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
 
     @MockitoBean
     private SearchGameUsersUseCase searchGameUsersUseCase;
+
+    @MockitoBean
+    private UpdateGameUserNicknameUseCase updateGameUserNicknameUseCase;
 
     @Test
     void 존재하는_게임_프로필을_조회하면_공개_응답을_반환한다() throws Exception {
@@ -114,6 +120,39 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("COMMON_400"))
                 .andExpect(jsonPath("$.message").value("gameUserId는 1 이상이어야 합니다."));
+    }
+
+    @Test
+    void 인증된_사용자가_자신의_게임_프로필_닉네임을_수정하면_200_응답을_반환한다() throws Exception {
+        // given
+        GameUserProfile updatedProfile = new GameUserProfile(
+                1L,
+                "newPlayer",
+                Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol"),
+                3L
+        );
+
+        given(updateGameUserNicknameUseCase.updateNickname(
+                UpdateGameUserNicknameCommand.of(3L, 1L, "newPlayer")
+        )).willReturn(updatedProfile);
+
+        // when & then
+        mockMvc.perform(patch("/game-users/{gameUserId}", 1L)
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "newPlayer"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.nickname").value("newPlayer"))
+                .andExpect(jsonPath("$.data.game.id").value(2))
+                .andExpect(jsonPath("$.data.user.id").value(3));
     }
 
 
