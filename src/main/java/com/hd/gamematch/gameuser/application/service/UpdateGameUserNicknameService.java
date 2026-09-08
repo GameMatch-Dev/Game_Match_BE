@@ -1,6 +1,7 @@
 package com.hd.gamematch.gameuser.application.service;
 
 import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
+import com.hd.gamematch.gameuser.application.exception.GameUserAccessDeniedException;
 import com.hd.gamematch.gameuser.application.port.in.update.UpdateGameUserNicknameCommand;
 import com.hd.gamematch.gameuser.application.port.in.update.UpdateGameUserNicknameUseCase;
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUserPort;
@@ -22,6 +23,10 @@ public class UpdateGameUserNicknameService implements UpdateGameUserNicknameUseC
     public GameUserProfile updateNickname(UpdateGameUserNicknameCommand command) {
         GameUserProfile profile = loadGameUserPort.loadGameUserById(command.gameUserId())
                 .orElseThrow(GameUserNotFoundException::new);
+
+        if (!profile.userId().equals(command.userId())) {
+            throw new GameUserAccessDeniedException();
+        }
 
         updateGameUserNicknamePort.updateNickname(profile.id(), command.nickname());
 
