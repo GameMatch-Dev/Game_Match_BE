@@ -2,6 +2,7 @@ package com.hd.gamematch.gameuser.application.service;
 
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.gameuser.application.exception.GameUserAccessDeniedException;
+import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
 import com.hd.gamematch.gameuser.application.port.in.update.UpdateGameUserNicknameCommand;
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.UpdateGameUserNicknamePort;
@@ -74,5 +75,19 @@ class UpdateGameUserNicknameServiceTest {
                 .hasMessage("게임 프로필을 수정할 권한이 없습니다.");
 
         then(updateGameUserNicknamePort).should(never()).updateNickname(1L, "hijackedName");
+    }
+
+    @Test
+    void 존재하지_않는_게임_프로필_닉네임을_수정하면_조회_예외를_던지고_수정하지_않는다() {
+        // Optional.empty(): 조회 조건에 맞는 게임 프로필 행이 DB에 없다는 뜻이다.
+        given(loadGameUserPort.loadGameUserById(999L)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> updateGameUserNicknameService.updateNickname(
+                UpdateGameUserNicknameCommand.of(3L, 999L, "newPlayer")
+        ))
+                .isInstanceOf(GameUserNotFoundException.class)
+                .hasMessage("게임 프로필을 찾을 수 없습니다.");
+
+        then(updateGameUserNicknamePort).shouldHaveNoInteractions();
     }
 }

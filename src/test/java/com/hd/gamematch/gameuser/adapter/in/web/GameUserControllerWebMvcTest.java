@@ -196,6 +196,27 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
     }
 
     @Test
+    void 존재하지_않는_게임_프로필_닉네임을_수정하면_404_응답을_반환한다() throws Exception {
+        given(updateGameUserNicknameUseCase.updateNickname(
+                UpdateGameUserNicknameCommand.of(3L, 999L, "newPlayer")
+        )).willThrow(new GameUserNotFoundException());
+
+        mockMvc.perform(patch("/game-users/{gameUserId}", 999L)
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "newPlayer"
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("GAME_USER_001"))
+                .andExpect(jsonPath("$.message").value("게임 프로필을 찾을 수 없습니다."));
+    }
+
+    @Test
     void 토큰_없이_현재_사용자의_게임_프로필을_조회하면_401_응답을_반환한다() throws Exception {
         mockMvc.perform(get("/game-users/me/games/{gameId}", 2L)
                         .accept(MediaType.APPLICATION_JSON))
