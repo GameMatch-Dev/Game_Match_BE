@@ -7,6 +7,7 @@ import com.hd.gamematch.game.adapter.out.persistence.GameJpaEntity;
 import com.hd.gamematch.game.adapter.out.persistence.GameJpaRepository;
 import com.hd.gamematch.gameuser.adapter.out.persistence.GameUserJpaEntity;
 import com.hd.gamematch.gameuser.adapter.out.persistence.GameUserJpaRepository;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,6 +42,9 @@ class GameUserControllerIntegrationTest {
 
     @Autowired
     private GameUserJpaRepository gameUserJpaRepository;
+
+    @Autowired
+    private EntityManager entityManager;
 
     @Test
     void 게임_프로필_등록_요청이_성공하면_프로필을_생성한다() throws Exception {
@@ -81,6 +86,47 @@ class GameUserControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.game.sort").value("MOBA"))
                 .andExpect(jsonPath("$.data.game.url").value("https://example.com/lol"))
                 .andExpect(jsonPath("$.data.user.id").value(savedUser.getId()));
+    }
+
+    @Test
+    void 인증된_사용자가_게임_프로필_닉네임을_수정한다() throws Exception {
+        // given: 실제 사용자·게임·게임 프로필과 그 사용자의 JWT를 준비한다.
+        UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
+        GameJpaEntity savedGame = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        // PATCH 요청 전에 프로필 INSERT를 DB에 즉시 반영해, 이후 요청이 확실히 조회할 수 있게 한다.
+        // (save만으로도 트랜잭션 종료 시 반영되지만, 이 테스트에서는 시작 데이터를 먼저 확정한다.)
+        GameUserJpaEntity savedGameUser = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(savedUser.getId(), savedGame.getId(), "playerA")
+        );
+        String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
+
+        // when & then: Mock 없이 Security → Controller → Service → Persistence를 통과한다.
+        mockMvc.perform(patch("/game-users/{gameUserId}", savedGameUser.getId())
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "newPlayer"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(savedGameUser.getId()))
+                .andExpect(jsonPath("$.data.nickname").value("newPlayer"))
+                .andExpect(jsonPath("$.data.game.id").value(savedGame.getId()))
+                .andExpect(jsonPath("$.data.user.id").value(savedUser.getId()));
+
+        // flush: PATCH 과정에서 변경된 managed 엔티티의 UPDATE SQL을 DB에 동기화한다.
+        entityManager.flush();
+        // clear: 1차 캐시를 비워 아래 findById가 메모리 객체가 아닌 DB를 다시 조회하게 한다.
+        entityManager.clear();
+
+        assertThat(gameUserJpaRepository.findById(savedGameUser.getId()).orElseThrow().getNickname())
+                .isEqualTo("newPlayer");
     }
 
 
