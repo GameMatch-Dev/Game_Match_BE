@@ -64,6 +64,27 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
+    void 게임_프로필_닉네임을_수정한다() {
+        // given
+        GameUserJpaEntity gameUser = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(1L, 10L, "playerA")
+        );
+        entityManager.clear();
+
+        // when
+        gameUserPersistenceAdapter.updateNickname(gameUser.getId(), "newPlayer");
+        entityManager.flush();
+        entityManager.clear();
+
+        // then
+        GameUserJpaEntity updatedGameUser = gameUserJpaRepository
+                .findById(gameUser.getId())
+                .orElseThrow();
+
+        assertThat(updatedGameUser.getNickname()).isEqualTo("newPlayer");
+    }
+
+    @Test
     void 같은_사용자와_게임의_프로필이_있으면_참을_반환한다() {
         // Given: 이미 같은 사용자와 게임으로 저장된 프로필이 있다.
         gameUserPersistenceAdapter.save(

@@ -12,7 +12,10 @@ import com.hd.gamematch.gameuser.application.port.in.register.RegisterGameUserUs
 import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersQuery;
 import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersResult;
 import com.hd.gamematch.gameuser.application.port.in.search.SearchGameUsersUseCase;
+import com.hd.gamematch.gameuser.application.port.in.update.UpdateGameUserNicknameCommand;
+import com.hd.gamematch.gameuser.application.port.in.update.UpdateGameUserNicknameUseCase;
 import com.hd.gamematch.gameuser.adapter.in.web.request.RegisterGameUserRequest;
+import com.hd.gamematch.gameuser.adapter.in.web.request.UpdateGameUserNicknameRequest;
 import com.hd.gamematch.gameuser.adapter.in.web.response.FindGameUserResponse;
 import com.hd.gamematch.gameuser.adapter.in.web.response.RegisterGameUserResponse;
 import com.hd.gamematch.gameuser.adapter.in.web.response.SearchGameUsersResponse;
@@ -44,6 +47,8 @@ public class GameUserController {
     private final FindGameUserByUserAndGameUseCase findGameUserByUserAndGameUseCase;
 
     private final SearchGameUsersUseCase searchGameUsersUseCase;
+
+    private final UpdateGameUserNicknameUseCase updateGameUserNicknameUseCase;
 
     @GetMapping("/{gameUserId}")
     public ResponseEntity<CommonResponse<FindGameUserResponse>> getGameUserProfile(
@@ -103,6 +108,23 @@ public class GameUserController {
 
         GameUserProfile gameUserProfile = findGameUserByUserAndGameUseCase.findGameUser(
                 FindGameUserByUserAndGameQuery.of(userId, gameId)
+        );
+
+        return ResponseEntity.ok(
+                CommonResponse.success(FindGameUserResponse.from(gameUserProfile))
+        );
+    }
+
+    @PatchMapping("/{gameUserId}")
+    public ResponseEntity<CommonResponse<FindGameUserResponse>> updateGameUserNickname(
+            @PathVariable Long gameUserId,
+            @RequestBody UpdateGameUserNicknameRequest request,
+            Authentication authentication
+    ) {
+        Long userId = (Long) authentication.getPrincipal();
+
+        GameUserProfile gameUserProfile = updateGameUserNicknameUseCase.updateNickname(
+                UpdateGameUserNicknameCommand.of(userId, gameUserId, request.nickname())
         );
 
         return ResponseEntity.ok(

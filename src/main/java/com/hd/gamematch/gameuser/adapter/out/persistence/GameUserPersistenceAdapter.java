@@ -14,6 +14,7 @@ import com.hd.gamematch.gameuser.application.port.out.LoadGameUserByUserAndGameP
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUsersPort;
 import com.hd.gamematch.gameuser.application.port.out.SaveGameUserPort;
+import com.hd.gamematch.gameuser.application.port.out.UpdateGameUserNicknamePort;
 import com.hd.gamematch.gameuser.domain.GameUser;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +34,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameUserPort, ExistsGameUserNicknamePort,
-        LoadGameUserPort, LoadGameUserByUserAndGamePort, LoadGameUsersPort {
+        LoadGameUserPort, LoadGameUserByUserAndGamePort, LoadGameUsersPort, UpdateGameUserNicknamePort {
 
     private static final String DUPLICATE_REGISTRATION_CONSTRAINT =
             "uk_game_user_user_id_game_id";
@@ -101,6 +102,14 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
                 gameId,
                 nickname
         );
+    }
+
+    @Override
+    public void updateNickname(Long gameUserId, String nickname) {
+        GameUserJpaEntity gameUser = gameUserJpaRepository.findById(gameUserId)
+                .orElseThrow();
+
+        gameUser.updateNickname(nickname);
     }
 
     @Override
