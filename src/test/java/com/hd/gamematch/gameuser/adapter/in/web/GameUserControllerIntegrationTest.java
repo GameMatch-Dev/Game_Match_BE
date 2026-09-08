@@ -166,6 +166,22 @@ class GameUserControllerIntegrationTest {
                 .isEqualTo("playerA");
     }
 
+    @Test
+    void 토큰_없이_게임_프로필_닉네임을_수정하면_401_응답을_반환한다() throws Exception {
+        // JWT가 없으면 Controller와 Service에 도달하기 전에 Security가 요청을 차단한다.
+        mockMvc.perform(patch("/game-users/{gameUserId}", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "newPlayer"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+    }
+
 
     @Test
     void 같은_사용자가_같은_게임에_재등록하면_거부한다() throws Exception {
