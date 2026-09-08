@@ -3,6 +3,7 @@ package com.hd.gamematch.gameuser.adapter.in.web;
 import com.hd.gamematch.game.adapter.in.web.exception.GameExceptionHandler;
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.gameuser.adapter.in.web.exception.GameUserExceptionHandler;
+import com.hd.gamematch.gameuser.application.exception.GameUserAccessDeniedException;
 import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
 import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserQuery;
 import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserUseCase;
@@ -155,6 +156,27 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.data.user.id").value(3));
     }
 
+    @Test
+    void 다른_사용자가_게임_프로필_닉네임을_수정하면_403_응답을_반환한다() throws Exception {
+        // given: Controller는 Service가 전달한 권한 예외를 403 API 응답으로 변환해야 한다.
+        given(updateGameUserNicknameUseCase.updateNickname(
+                UpdateGameUserNicknameCommand.of(4L, 1L, "hijackedName")
+        )).willThrow(new GameUserAccessDeniedException());
+
+        mockMvc.perform(patch("/game-users/{gameUserId}", 1L)
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(4L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "hijackedName"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("AUTH_403"))
+                .andExpect(jsonPath("$.message").value("게임 프로필을 수정할 권한이 없습니다."));
+    }
 
     @Test
     void 토큰_없이_현재_사용자의_게임_프로필을_조회하면_401_응답을_반환한다() throws Exception {
