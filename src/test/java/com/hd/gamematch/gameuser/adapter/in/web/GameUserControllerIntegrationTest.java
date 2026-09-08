@@ -131,6 +131,43 @@ class GameUserControllerIntegrationTest {
 
 
     @Test
+    void 다른_사용자가_게임_프로필_닉네임을_수정하면_403_응답을_반환하고_기존_닉네임을_유지한다() throws Exception {
+        // given: 프로필 소유자와 수정 요청자를 서로 다른 사용자로 준비한다.
+        UserJpaEntity owner = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity otherUser = userJpaRepository.save(UserJpaEntity.create());
+        GameJpaEntity savedGame = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        GameUserJpaEntity savedGameUser = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(owner.getId(), savedGame.getId(), "playerA")
+        );
+        String otherUserAccessToken = jwtTokenService.issueAccessToken(otherUser.getId()).value();
+
+        // when & then: 로그인에는 성공했어도, 프로필 주인이 아니면 수정할 수 없다.
+        mockMvc.perform(patch("/game-users/{gameUserId}", savedGameUser.getId())
+                        .header("Authorization", "Bearer " + otherUserAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "hijackedName"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("AUTH_403"))
+                .andExpect(jsonPath("$.message").value("게임 프로필을 수정할 권한이 없습니다."));
+
+        // 캐시를 비우고 DB를 다시 읽어, 권한 없는 요청이 실제 데이터를 바꾸지 않았음을 검증한다.
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(gameUserJpaRepository.findById(savedGameUser.getId()).orElseThrow().getNickname())
+                .isEqualTo("playerA");
+    }
+
+
+    @Test
     void 같은_사용자가_같은_게임에_재등록하면_거부한다() throws Exception {
         // Given: 한 사용자와 게임, 그리고 인증 토큰을 준비한다.
         UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
