@@ -182,6 +182,28 @@ class GameUserControllerIntegrationTest {
                 .andExpect(jsonPath("$.code").value("AUTH_401"));
     }
 
+    @Test
+    void 존재하지_않는_게임_프로필_닉네임을_수정하면_404_응답을_반환한다() throws Exception {
+        UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
+        String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
+
+        mockMvc.perform(patch("/game-users/{gameUserId}", 999L)
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "newPlayer"
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("GAME_USER_001"))
+                .andExpect(jsonPath("$.message").value("게임 프로필을 찾을 수 없습니다."));
+
+        assertThat(gameUserJpaRepository.count()).isZero();
+    }
+
 
     @Test
     void 같은_사용자가_같은_게임에_재등록하면_거부한다() throws Exception {
