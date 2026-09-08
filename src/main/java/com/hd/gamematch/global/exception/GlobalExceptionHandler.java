@@ -2,6 +2,7 @@ package com.hd.gamematch.global.exception;
 
 import com.hd.gamematch.global.exception.code.CommonErrorCode;
 import com.hd.gamematch.global.response.CommonResponse;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -12,6 +13,19 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 // @RestControllerAdvice는 처리 결과를 화면이 아닌 JSON 본문으로 작성하게 한다.
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<CommonResponse<Void>> handleConstraintViolation(
+            ConstraintViolationException exception
+    ) {
+        return ResponseEntity.status(CommonErrorCode.COMMON_400.status())
+                .body(new CommonResponse<>(
+                        false,
+                        CommonErrorCode.COMMON_400.code(),
+                        CommonErrorCode.COMMON_400.defaultMessage(),
+                        null
+                ));
+    }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<CommonResponse<Void>> handleMethodArgumentTypeMismatch(

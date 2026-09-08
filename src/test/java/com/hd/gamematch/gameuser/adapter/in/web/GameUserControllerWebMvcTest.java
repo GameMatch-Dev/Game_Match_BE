@@ -217,6 +217,24 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
     }
 
     @Test
+    void 게임_프로필_ID가_0이면_닉네임_수정에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(patch("/game-users/{gameUserId}", 0L)
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "newPlayer"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+
+        then(updateGameUserNicknameUseCase).shouldHaveNoInteractions();
+    }
+
+    @Test
     void 토큰_없이_현재_사용자의_게임_프로필을_조회하면_401_응답을_반환한다() throws Exception {
         mockMvc.perform(get("/game-users/me/games/{gameId}", 2L)
                         .accept(MediaType.APPLICATION_JSON))

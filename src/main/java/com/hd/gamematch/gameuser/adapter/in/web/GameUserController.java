@@ -21,10 +21,12 @@ import com.hd.gamematch.gameuser.adapter.in.web.response.RegisterGameUserRespons
 import com.hd.gamematch.gameuser.adapter.in.web.response.SearchGameUsersResponse;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.global.response.CommonResponse;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -36,6 +38,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/game-users")
 @RequiredArgsConstructor
+@Validated
 public class GameUserController {
 
     private final FindGameUseCase findGameUseCase;
@@ -117,7 +120,7 @@ public class GameUserController {
 
     @PatchMapping("/{gameUserId}")
     public ResponseEntity<CommonResponse<FindGameUserResponse>> updateGameUserNickname(
-            @PathVariable Long gameUserId,
+            @PathVariable @Min(value = 1, message = "gameUserId는 1 이상이어야 합니다.") Long gameUserId,
             @RequestBody UpdateGameUserNicknameRequest request,
             Authentication authentication
     ) {
