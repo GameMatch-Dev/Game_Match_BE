@@ -225,6 +225,27 @@ class GameUserControllerIntegrationTest {
         assertThat(gameUserJpaRepository.count()).isZero();
     }
 
+    @Test
+    void 닉네임이_공백이면_게임_프로필_수정에_400_응답을_반환한다() throws Exception {
+        UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
+        String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
+
+        mockMvc.perform(patch("/game-users/{gameUserId}", 1L)
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": " "
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+
+        assertThat(gameUserJpaRepository.count()).isZero();
+    }
+
 
     @Test
     void 같은_사용자가_같은_게임에_재등록하면_거부한다() throws Exception {

@@ -21,6 +21,7 @@ import com.hd.gamematch.gameuser.adapter.in.web.response.RegisterGameUserRespons
 import com.hd.gamematch.gameuser.adapter.in.web.response.SearchGameUsersResponse;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.global.response.CommonResponse;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -121,7 +122,7 @@ public class GameUserController {
     @PatchMapping("/{gameUserId}")
     public ResponseEntity<CommonResponse<FindGameUserResponse>> updateGameUserNickname(
             @PathVariable @Min(value = 1, message = "gameUserId는 1 이상이어야 합니다.") Long gameUserId,
-            @RequestBody UpdateGameUserNicknameRequest request,
+            @Valid @RequestBody UpdateGameUserNicknameRequest request,
             Authentication authentication
     ) {
         Long userId = (Long) authentication.getPrincipal();

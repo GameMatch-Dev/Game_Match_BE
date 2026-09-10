@@ -6,6 +6,7 @@ import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 
@@ -17,6 +18,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<CommonResponse<Void>> handleConstraintViolation(
             ConstraintViolationException exception
+    ) {
+        return ResponseEntity.status(CommonErrorCode.COMMON_400.status())
+                .body(new CommonResponse<>(
+                        false,
+                        CommonErrorCode.COMMON_400.code(),
+                        CommonErrorCode.COMMON_400.defaultMessage(),
+                        null
+                ));
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<CommonResponse<Void>> handleMethodArgumentNotValid(
+            MethodArgumentNotValidException exception
     ) {
         return ResponseEntity.status(CommonErrorCode.COMMON_400.status())
                 .body(new CommonResponse<>(
