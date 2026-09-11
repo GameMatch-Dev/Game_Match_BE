@@ -28,6 +28,11 @@ public class CreateFriendlyMatchService implements CreateFriendlyMatchUseCase {
                 FindGameUserQuery.of(command.hostGameUserId())
         );
 
+        // JWT 사용자와 호스트 프로필 소유자가 다르면 타인의 프로필로 모집을 만들 수 없다.
+        if (!host.userId().equals(command.userId())) {
+            throw new IllegalArgumentException("자신의 게임 프로필로만 친선 경기 모집을 만들 수 있습니다.");
+        }
+
         // DB가 ID를 발급하기 전이므로 새 매치는 아직 식별자가 없다.
         FriendlyMatch friendlyMatch = new FriendlyMatch(
                 null,
