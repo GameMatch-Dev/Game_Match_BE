@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -94,5 +95,33 @@ class CreateFriendlyMatchServiceTest {
         assertThat(creatingFriendlyMatch.state()).isEqualTo(FriendlyMatchState.RECRUITING);
         assertThat(creatingFriendlyMatch.recruit()).isEqualTo(5);
         assertThat(creatingFriendlyMatch.comment()).isEqualTo("저녁에 같이 하실 분");
+    }
+
+    // 인증 사용자와 호스트 프로필 소유자가 다르면 타인의 프로필로 매치를 만들 수 없다.
+    @Test
+    void 타인의_게임_프로필로는_친선_경기_모집을_생성할_수_없다() {
+        // JWT 사용자 3번이 사용자 4번 소유의 10번 게임 프로필을 호스트로 지정했다.
+        Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
+        GameUserProfile anotherUsersHost = new GameUserProfile(10L, "hostA", game, 4L);
+        CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
+                3L,
+                10L,
+                1L,
+                LocalDate.of(2027, 6, 10),
+                LocalTime.of(20, 0),
+                FriendlyMatchSort.TEAM,
+                5,
+                "저녁에 같이 하실 분"
+        );
+        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(10L)))
+                .willReturn(anotherUsersHost);
+
+        // 소유권이 다르면 저장 전에 예외가 발생해야 한다.
+        assertThatThrownBy(() -> createFriendlyMatchService.create(command))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("자신의 게임 프로필로만 친선 경기 모집을 만들 수 있습니다.");
+
+        // 실패한 요청은 매치 저장으로 이어지면 안 된다.
+        then(saveFriendlyMatchPort).shouldHaveNoInteractions();
     }
 }
