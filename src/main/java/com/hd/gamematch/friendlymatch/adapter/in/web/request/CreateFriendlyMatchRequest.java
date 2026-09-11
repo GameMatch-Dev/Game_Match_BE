@@ -24,9 +24,22 @@ public record CreateFriendlyMatchRequest(
                 gameId,
                 date,
                 time,
-                FriendlyMatchSort.values()[sort],
+                toSort(sort),
                 recruit,
                 comment
         );
+    }
+
+    // API 계약의 숫자 값을 참가 방식으로 명시적으로 변환한다.
+    private static FriendlyMatchSort toSort(Integer sort) {
+        if (sort == null) {
+            throw new IllegalArgumentException("sort는 0 또는 1이어야 합니다.");
+        }
+
+        return switch (sort) {
+            case 0 -> FriendlyMatchSort.TEAM;
+            case 1 -> FriendlyMatchSort.INDIVIDUAL;
+            default -> throw new IllegalArgumentException("sort는 0 또는 1이어야 합니다.");
+        };
     }
 }
