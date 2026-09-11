@@ -19,7 +19,7 @@ public record CreateFriendlyMatchCommand(
         String comment
 ) {
 
-    // 호출부가 생성 방식에 의존하지 않도록 정적 팩토리로 Command를 만든다.
+    // Controller가 전달할 친선 경기 모집 생성 입력값을 Command로 묶는다.
     public static CreateFriendlyMatchCommand of(
             Long userId,
             Long hostGameUserId,
