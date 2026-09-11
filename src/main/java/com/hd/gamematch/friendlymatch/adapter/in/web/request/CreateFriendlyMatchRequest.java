@@ -2,6 +2,7 @@ package com.hd.gamematch.friendlymatch.adapter.in.web.request;
 
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchCommand;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
+import jakarta.validation.constraints.Positive;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -12,7 +13,7 @@ public record CreateFriendlyMatchRequest(
         LocalDate date,
         LocalTime time,
         Integer sort,
-        Integer recruit,
+        @Positive Integer recruit,
         String comment
 ) {
 
