@@ -6,6 +6,7 @@ import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
 import com.hd.gamematch.game.domain.Game;
+import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.global.exception.GlobalExceptionHandler;
 import com.hd.gamematch.support.security.SecuredWebMvcTestSupport;
@@ -92,5 +93,43 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.data.host.nickname").value("hostA"))
                 .andExpect(jsonPath("$.data.game.id").value(1L))
                 .andExpect(jsonPath("$.data.state").value(0));
+    }
+
+    // 호스트 게임 프로필이 없으면 기존 게임 프로필 조회 예외를 404 응답으로 변환한다.
+    @Test
+    void 존재하지_않는_호스트_게임_프로필로_친선_경기_모집을_생성하면_404_응답을_반환한다() throws Exception {
+        // given: Service가 호스트 게임 프로필을 찾지 못한 상황이다.
+        CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
+                3L,
+                999L,
+                1L,
+                LocalDate.of(2027, 6, 10),
+                LocalTime.of(20, 0),
+                FriendlyMatchSort.TEAM,
+                5,
+                "저녁에 같이 하실 분"
+        );
+        given(createFriendlyMatchUseCase.create(command))
+                .willThrow(new GameUserNotFoundException());
+
+        // when & then: 없는 호스트 프로필은 게임 프로필 없음 계약으로 응답한다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 999,
+                                  "gameId": 1,
+                                  "date": "2027-06-10",
+                                  "time": "20:00:00",
+                                  "sort": 0,
+                                  "recruit": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("GAME_USER_001"));
     }
 }
