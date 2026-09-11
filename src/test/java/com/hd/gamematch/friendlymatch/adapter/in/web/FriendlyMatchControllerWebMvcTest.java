@@ -208,4 +208,28 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
     }
+
+    // sort는 친선 경기 방식 enum 범위 안의 값만 받을 수 있다.
+    @Test
+    void 범위를_벗어난_sort로_친선_경기_모집을_생성하면_400_응답을_반환한다() throws Exception {
+        // when & then: TEAM(0), SOLO(1)가 아닌 값은 Service 호출 전에 요청 오류로 처리한다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 10,
+                                  "gameId": 1,
+                                  "date": "2027-06-10",
+                                  "time": "20:00:00",
+                                  "sort": 2,
+                                  "recruit": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
 }
