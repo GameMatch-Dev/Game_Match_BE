@@ -33,6 +33,11 @@ public class CreateFriendlyMatchService implements CreateFriendlyMatchUseCase {
             throw new IllegalArgumentException("자신의 게임 프로필로만 친선 경기 모집을 만들 수 있습니다.");
         }
 
+        // 호스트 프로필의 게임과 요청 게임이 다르면 다른 게임의 매치를 만들 수 없다.
+        if (!host.game().id().equals(command.gameId())) {
+            throw new IllegalArgumentException("호스트 게임 프로필의 게임과 요청 게임이 일치하지 않습니다.");
+        }
+
         // DB가 ID를 발급하기 전이므로 새 매치는 아직 식별자가 없다.
         FriendlyMatch friendlyMatch = new FriendlyMatch(
                 null,
