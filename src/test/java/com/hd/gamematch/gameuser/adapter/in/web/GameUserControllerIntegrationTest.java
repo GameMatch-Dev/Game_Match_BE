@@ -246,6 +246,41 @@ class GameUserControllerIntegrationTest {
         assertThat(gameUserJpaRepository.count()).isZero();
     }
 
+    @Test
+    void 기존과_같은_닉네임으로_게임_프로필을_수정하면_200_응답을_반환한다() throws Exception {
+        UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
+        GameJpaEntity savedGame = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        GameUserJpaEntity savedGameUser = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(savedUser.getId(), savedGame.getId(), "playerA")
+        );
+        String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
+
+        // 같은 값을 다시 보내도 요청은 성공하며, 리소스 상태는 기존 값으로 유지된다.
+        mockMvc.perform(patch("/game-users/{gameUserId}", savedGameUser.getId())
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "playerA"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(savedGameUser.getId()))
+                .andExpect(jsonPath("$.data.nickname").value("playerA"));
+
+        // 1차 캐시를 비운 뒤 DB를 다시 읽어, 기존 닉네임이 유지됐음을 검증한다.
+        entityManager.flush();
+        entityManager.clear();
+
+        assertThat(gameUserJpaRepository.findById(savedGameUser.getId()).orElseThrow().getNickname())
+                .isEqualTo("playerA");
+    }
+
 
     @Test
     void 같은_사용자가_같은_게임에_재등록하면_거부한다() throws Exception {

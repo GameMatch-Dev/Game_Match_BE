@@ -90,4 +90,22 @@ class UpdateGameUserNicknameServiceTest {
 
         then(updateGameUserNicknamePort).shouldHaveNoInteractions();
     }
+
+    @Test
+    void 기존과_같은_닉네임으로_수정하면_기존_프로필을_반환하고_수정하지_않는다() {
+        GameUserProfile profile = new GameUserProfile(
+                1L,
+                "playerA",
+                Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol"),
+                3L
+        );
+        given(loadGameUserPort.loadGameUserById(1L)).willReturn(Optional.of(profile));
+
+        GameUserProfile result = updateGameUserNicknameService.updateNickname(
+                UpdateGameUserNicknameCommand.of(3L, 1L, "playerA")
+        );
+
+        assertThat(result).isEqualTo(profile);
+        then(updateGameUserNicknamePort).shouldHaveNoInteractions();
+    }
 }

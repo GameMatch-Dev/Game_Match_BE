@@ -253,6 +253,35 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
     }
 
     @Test
+    void 기존과_같은_닉네임으로_게임_프로필을_수정하면_200_응답을_반환한다() throws Exception {
+        // given: 같은 값을 다시 보내도 리소스 상태는 그대로이며, 성공으로 응답한다.
+        GameUserProfile profile = new GameUserProfile(
+                1L,
+                "playerA",
+                Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol"),
+                3L
+        );
+        given(updateGameUserNicknameUseCase.updateNickname(
+                UpdateGameUserNicknameCommand.of(3L, 1L, "playerA")
+        )).willReturn(profile);
+
+        mockMvc.perform(patch("/game-users/{gameUserId}", 1L)
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "playerA"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.nickname").value("playerA"));
+    }
+
+    @Test
     void 토큰_없이_현재_사용자의_게임_프로필을_조회하면_401_응답을_반환한다() throws Exception {
         mockMvc.perform(get("/game-users/me/games/{gameId}", 2L)
                         .accept(MediaType.APPLICATION_JSON))

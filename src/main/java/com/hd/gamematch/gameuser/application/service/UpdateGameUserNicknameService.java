@@ -28,6 +28,11 @@ public class UpdateGameUserNicknameService implements UpdateGameUserNicknameUseC
             throw new GameUserAccessDeniedException();
         }
 
+        // 기존 닉네임과 같으면 성공으로 처리하되, 불필요한 DB UPDATE는 실행하지 않는다.
+        if (profile.nickname().equals(command.nickname())) {
+            return profile;
+        }
+
         updateGameUserNicknamePort.updateNickname(profile.id(), command.nickname());
 
         return new GameUserProfile(
