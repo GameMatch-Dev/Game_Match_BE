@@ -170,4 +170,42 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
     }
+
+    // 요청 게임과 호스트 게임 프로필의 게임이 다르면 다른 게임의 매치를 만들 수 없다.
+    @Test
+    void 호스트_게임_프로필과_다른_게임으로_친선_경기_모집을_생성하면_400_응답을_반환한다() throws Exception {
+        // given: 10번 호스트 프로필은 1번 게임용인데 요청은 2번 게임을 지정했다.
+        CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
+                3L,
+                10L,
+                2L,
+                LocalDate.of(2027, 6, 10),
+                LocalTime.of(20, 0),
+                FriendlyMatchSort.TEAM,
+                5,
+                "저녁에 같이 하실 분"
+        );
+        given(createFriendlyMatchUseCase.create(command))
+                .willThrow(new IllegalArgumentException("호스트 게임 프로필의 게임과 요청 게임이 일치하지 않습니다."));
+
+        // when & then: 게임 불일치는 저장하지 않고 공통 400 오류로 응답한다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 10,
+                                  "gameId": 2,
+                                  "date": "2027-06-10",
+                                  "time": "20:00:00",
+                                  "sort": 0,
+                                  "recruit": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
 }
