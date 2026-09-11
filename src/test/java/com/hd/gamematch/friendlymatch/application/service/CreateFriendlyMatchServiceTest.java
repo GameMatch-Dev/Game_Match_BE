@@ -124,4 +124,31 @@ class CreateFriendlyMatchServiceTest {
         // 실패한 요청은 매치 저장으로 이어지면 안 된다.
         then(saveFriendlyMatchPort).shouldHaveNoInteractions();
     }
+
+    // 호스트 프로필의 게임과 요청 게임이 다르면 잘못된 게임으로 매치를 만들 수 없다.
+    @Test
+    void 호스트_게임_프로필과_다른_게임으로는_친선_경기_모집을_생성할_수_없다() {
+        // 10번 호스트 프로필은 1번 게임용인데 요청은 2번 게임을 지정했다.
+        Game hostGame = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
+        GameUserProfile host = new GameUserProfile(10L, "hostA", hostGame, 3L);
+        CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
+                3L,
+                10L,
+                2L,
+                LocalDate.of(2027, 6, 10),
+                LocalTime.of(20, 0),
+                FriendlyMatchSort.TEAM,
+                5,
+                "저녁에 같이 하실 분"
+        );
+        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(10L))).willReturn(host);
+
+        // 게임이 다르면 저장 전에 예외가 발생해야 한다.
+        assertThatThrownBy(() -> createFriendlyMatchService.create(command))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("호스트 게임 프로필의 게임과 요청 게임이 일치하지 않습니다.");
+
+        // 실패한 요청은 매치 저장으로 이어지면 안 된다.
+        then(saveFriendlyMatchPort).shouldHaveNoInteractions();
+    }
 }
