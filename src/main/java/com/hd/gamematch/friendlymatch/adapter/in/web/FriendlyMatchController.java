@@ -5,6 +5,7 @@ import com.hd.gamematch.friendlymatch.adapter.in.web.response.CreateFriendlyMatc
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchUseCase;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.global.response.CommonResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +28,7 @@ public class FriendlyMatchController {
     // 인증된 사용자가 자신의 게임 프로필을 호스트로 친선 경기 모집을 생성한다.
     @PostMapping
     public ResponseEntity<CommonResponse<CreateFriendlyMatchResponse>> createFriendlyMatch(
-            @RequestBody CreateFriendlyMatchRequest request,
+            @Valid @RequestBody CreateFriendlyMatchRequest request,
             Authentication authentication
     ) {
         // JWT Filter가 검증한 토큰의 sub를 현재 내부 사용자 ID로 넣어 둔다.
