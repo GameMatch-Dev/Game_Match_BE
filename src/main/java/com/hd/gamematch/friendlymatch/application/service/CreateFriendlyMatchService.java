@@ -3,6 +3,7 @@ package com.hd.gamematch.friendlymatch.application.service;
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchCommand;
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchUseCase;
 import com.hd.gamematch.friendlymatch.application.port.out.SaveFriendlyMatchPort;
+import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchAccessDeniedException;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
 import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserQuery;
@@ -30,7 +31,7 @@ public class CreateFriendlyMatchService implements CreateFriendlyMatchUseCase {
 
         // JWT 사용자와 호스트 프로필 소유자가 다르면 타인의 프로필로 모집을 만들 수 없다.
         if (!host.userId().equals(command.userId())) {
-            throw new IllegalArgumentException("자신의 게임 프로필로만 친선 경기 모집을 만들 수 있습니다.");
+            throw new FriendlyMatchAccessDeniedException();
         }
 
         // 호스트 프로필의 게임과 요청 게임이 다르면 다른 게임의 매치를 만들 수 없다.

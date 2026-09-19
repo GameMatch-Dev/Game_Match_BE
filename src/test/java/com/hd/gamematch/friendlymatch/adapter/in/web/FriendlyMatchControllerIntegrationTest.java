@@ -97,4 +97,68 @@ class FriendlyMatchControllerIntegrationTest {
         assertThat(savedFriendlyMatch.getRecruit()).isEqualTo(5);
         assertThat(savedFriendlyMatch.getComment()).isEqualTo("저녁에 같이 하실 분");
     }
+
+    // 토큰 없이 생성 요청하면 Security가 Controller 전에 요청을 차단한다.
+    @Test
+    void 토큰_없이_친선_경기_모집을_생성하면_401_응답을_반환한다() throws Exception {
+        mockMvc.perform(post("/friendly-matches")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 10,
+                                  "gameId": 1,
+                                  "date": "2027-06-10",
+                                  "time": "20:00:00",
+                                  "sort": 0,
+                                  "recruit": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("AUTH_401"));
+
+        // 인증 단계에서 차단되므로 친선 경기 데이터는 저장되지 않아야 한다.
+        assertThat(friendlyMatchJpaRepository.count()).isZero();
+    }
+
+    // 다른 사용자의 게임 프로필을 호스트로 지정하면 친선 경기 모집을 만들 수 없다.
+    @Test
+    void 타인의_게임_프로필로_친선_경기_모집을_생성하면_403_응답을_반환한다() throws Exception {
+        // given: 호스트 프로필 소유자와 생성 요청 사용자를 서로 다르게 준비한다.
+        UserJpaEntity hostOwner = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity requester = userJpaRepository.save(UserJpaEntity.create());
+        GameJpaEntity savedGame = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol")
+        );
+        GameUserJpaEntity anotherUsersHost = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(hostOwner.getId(), savedGame.getId(), "hostA")
+        );
+        String requesterAccessToken = jwtTokenService.issueAccessToken(requester.getId()).value();
+
+        // when & then: 인증에는 성공해도 호스트 프로필 소유자가 아니면 403으로 거부한다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header("Authorization", "Bearer " + requesterAccessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": %d,
+                                  "gameId": %d,
+                                  "date": "2027-06-10",
+                                  "time": "20:00:00",
+                                  "sort": 0,
+                                  "recruit": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """.formatted(anotherUsersHost.getId(), savedGame.getId())))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("AUTH_403"))
+                .andExpect(jsonPath("$.message").value("친선 경기 모집을 만들 권한이 없습니다."));
+
+        // 권한이 없는 요청은 친선 경기 테이블에 아무 행도 남기면 안 된다.
+        assertThat(friendlyMatchJpaRepository.count()).isZero();
+    }
 }

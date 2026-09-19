@@ -2,6 +2,7 @@ package com.hd.gamematch.friendlymatch.adapter.in.web;
 
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchCommand;
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchUseCase;
+import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchAccessDeniedException;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
@@ -135,7 +136,7 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
 
     // 인증 사용자가 소유하지 않은 게임 프로필은 호스트로 사용할 수 없다.
     @Test
-    void 타인의_게임_프로필로_친선_경기_모집을_생성하면_400_응답을_반환한다() throws Exception {
+    void 타인의_게임_프로필로_친선_경기_모집을_생성하면_403_응답을_반환한다() throws Exception {
         // given: JWT 사용자 3번이 다른 사용자의 10번 게임 프로필을 호스트로 지정했다.
         CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
                 3L,
@@ -148,9 +149,9 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 "저녁에 같이 하실 분"
         );
         given(createFriendlyMatchUseCase.create(command))
-                .willThrow(new IllegalArgumentException("자신의 게임 프로필로만 친선 경기 모집을 만들 수 있습니다."));
+                .willThrow(new FriendlyMatchAccessDeniedException());
 
-        // when & then: 소유권 위반은 저장하지 않고 공통 400 오류로 응답한다.
+        // when & then: 소유권 위반은 저장하지 않고 권한 오류로 응답한다.
         mockMvc.perform(post("/friendly-matches")
                         .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -166,9 +167,10 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.success").value(false))
-                .andExpect(jsonPath("$.code").value("COMMON_400"));
+                .andExpect(jsonPath("$.code").value("AUTH_403"))
+                .andExpect(jsonPath("$.message").value("친선 경기 모집을 만들 권한이 없습니다."));
     }
 
     // 요청 게임과 호스트 게임 프로필의 게임이 다르면 다른 게임의 매치를 만들 수 없다.

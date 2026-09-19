@@ -2,6 +2,7 @@ package com.hd.gamematch.friendlymatch.application.service;
 
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchCommand;
 import com.hd.gamematch.friendlymatch.application.port.out.SaveFriendlyMatchPort;
+import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchAccessDeniedException;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
@@ -118,8 +119,8 @@ class CreateFriendlyMatchServiceTest {
 
         // 소유권이 다르면 저장 전에 예외가 발생해야 한다.
         assertThatThrownBy(() -> createFriendlyMatchService.create(command))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("자신의 게임 프로필로만 친선 경기 모집을 만들 수 있습니다.");
+                .isInstanceOf(FriendlyMatchAccessDeniedException.class)
+                .hasMessage("친선 경기 모집을 만들 권한이 없습니다.");
 
         // 실패한 요청은 매치 저장으로 이어지면 안 된다.
         then(saveFriendlyMatchPort).shouldHaveNoInteractions();
