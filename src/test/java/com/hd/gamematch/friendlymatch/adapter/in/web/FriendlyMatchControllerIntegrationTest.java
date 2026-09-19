@@ -123,6 +123,38 @@ class FriendlyMatchControllerIntegrationTest {
         assertThat(friendlyMatchJpaRepository.count()).isZero();
     }
 
+    // 존재하지 않는 호스트 게임 프로필로는 친선 경기 모집을 생성할 수 없다.
+    @Test
+    void 존재하지_않는_호스트_게임_프로필로_친선_경기_모집을_생성하면_404_응답을_반환한다() throws Exception {
+        // given: 인증 사용자는 있지만, 요청 본문의 호스트 게임 프로필은 DB에 만들지 않는다.
+        UserJpaEntity savedUser = userJpaRepository.save(UserJpaEntity.create());
+        String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
+
+        // when & then: Service의 GameUserNotFoundException이 공통 예외 처리기를 거쳐 404로 변환된다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 999999,
+                                  "gameId": 1,
+                                  "date": "2027-06-10",
+                                  "time": "20:00:00",
+                                  "sort": 0,
+                                  "recruit": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("GAME_USER_001"))
+                .andExpect(jsonPath("$.message").value("게임 프로필을 찾을 수 없습니다."));
+
+        // 호스트 검증에서 중단되므로 친선 경기 데이터는 저장되지 않아야 한다.
+        assertThat(friendlyMatchJpaRepository.count()).isZero();
+    }
+
     // 다른 사용자의 게임 프로필을 호스트로 지정하면 친선 경기 모집을 만들 수 없다.
     @Test
     void 타인의_게임_프로필로_친선_경기_모집을_생성하면_403_응답을_반환한다() throws Exception {
