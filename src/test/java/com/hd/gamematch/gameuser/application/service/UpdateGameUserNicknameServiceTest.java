@@ -2,8 +2,10 @@ package com.hd.gamematch.gameuser.application.service;
 
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.gameuser.application.exception.GameUserAccessDeniedException;
+import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
 import com.hd.gamematch.gameuser.application.port.in.update.UpdateGameUserNicknameCommand;
+import com.hd.gamematch.gameuser.application.port.out.ExistsGameUserNicknamePort;
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.UpdateGameUserNicknamePort;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
@@ -30,6 +32,9 @@ class UpdateGameUserNicknameServiceTest {
     @Mock
     private UpdateGameUserNicknamePort updateGameUserNicknamePort;
 
+    @Mock
+    private ExistsGameUserNicknamePort existsGameUserNicknamePort;
+
     @InjectMocks
     private UpdateGameUserNicknameService updateGameUserNicknameService;
 
@@ -54,6 +59,27 @@ class UpdateGameUserNicknameServiceTest {
         assertThat(result.game()).isEqualTo(profile.game());
         assertThat(result.userId()).isEqualTo(3L);
         then(updateGameUserNicknamePort).should().updateNickname(1L, "newPlayer");
+    }
+
+    @Test
+    void 같은_게임의_다른_사용자가_사용_중인_닉네임으로_수정하면_중복_예외를_던지고_수정하지_않는다() {
+        GameUserProfile profile = new GameUserProfile(
+                1L,
+                "playerA",
+                Game.of(2L, "League of Legends", "MOBA", "https://example.com/lol"),
+                3L
+        );
+        given(loadGameUserPort.loadGameUserById(1L)).willReturn(Optional.of(profile));
+        given(existsGameUserNicknamePort.existsByGameIdAndNickname(2L, "duplicatedName"))
+                .willReturn(true);
+
+        assertThatThrownBy(() -> updateGameUserNicknameService.updateNickname(
+                UpdateGameUserNicknameCommand.of(3L, 1L, "duplicatedName")
+        ))
+                .isInstanceOf(GameUserNicknameAlreadyInUseException.class)
+                .hasMessage("이미 해당 게임에서 사용 중인 닉네임입니다.");
+
+        then(updateGameUserNicknamePort).shouldHaveNoInteractions();
     }
 
     @Test
