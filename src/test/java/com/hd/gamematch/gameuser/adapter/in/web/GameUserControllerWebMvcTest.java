@@ -4,6 +4,7 @@ import com.hd.gamematch.game.adapter.in.web.exception.GameExceptionHandler;
 import com.hd.gamematch.game.domain.Game;
 import com.hd.gamematch.gameuser.adapter.in.web.exception.GameUserExceptionHandler;
 import com.hd.gamematch.gameuser.application.exception.GameUserAccessDeniedException;
+import com.hd.gamematch.gameuser.application.exception.GameUserNicknameAlreadyInUseException;
 import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
 import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserQuery;
 import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserUseCase;
@@ -35,6 +36,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import java.util.List;
 import java.util.stream.Stream;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -154,6 +156,28 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.data.nickname").value("newPlayer"))
                 .andExpect(jsonPath("$.data.game.id").value(2))
                 .andExpect(jsonPath("$.data.user.id").value(3));
+    }
+
+    @Test
+    void 다른_사용자가_사용_중인_닉네임으로_수정하면_409_응답을_반환한다() throws Exception {
+        given(updateGameUserNicknameUseCase.updateNickname(
+                UpdateGameUserNicknameCommand.of(3L, 1L, "duplicatedName")
+        )).willThrow(new GameUserNicknameAlreadyInUseException());
+
+        mockMvc.perform(patch("/game-users/{gameUserId}", 1L)
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "duplicatedName"
+                                }
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("GAME_USER_002"))
+                .andExpect(jsonPath("$.message").value("이미 해당 게임에서 사용 중인 닉네임입니다."))
+                .andExpect(jsonPath("$.data").value(nullValue()));
     }
 
     @Test
