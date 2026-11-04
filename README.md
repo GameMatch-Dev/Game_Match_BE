@@ -1,95 +1,30 @@
-﻿# GameMatch
+# GameMatch
 
-GameMatch는 게임별 사용자 프로필, 그룹, 친선 경기 매칭, 게시판 기능을 제공하는 Spring Boot 백엔드 프로젝트입니다.
+게임별 커뮤니티에서 유저를 찾고, 친선경기를 모집하거나 참가를 신청하는 서비스입니다.
 
-## 프로젝트 방향
+![GameMatch 서비스 미리보기](https://raw.githubusercontent.com/Siwon-Choi/Game_Match_FE/main/assets/readme/game_match.gif)
 
-이 프로젝트는 Clean Architecture와 Hexagonal Architecture를 기준으로 설계합니다.
+*[프런트엔드 저장소](https://github.com/Siwon-Choi/Game_Match_FE)*
 
-- `domain`: 비즈니스 규칙과 핵심 모델
-- `application`: 유스케이스, 입력 포트, 출력 포트
-- `adapter.in`: Web Controller 등 외부 입력 어댑터
-- `adapter.out`: Persistence 등 외부 출력 어댑터
-- `global`: 공통 응답, 예외, 설정, 보안
+[API](docs/api.md) | [아키텍처](docs/architecture.md) | [핵심 구현](docs/core-implementation.md)
 
-## DB 설계
+## 주요 기능
 
-DB 구조는 dbdiagram.io 문서를 기준으로 관리합니다.
+| 기능 | 사용자가 할 수 있는 일 |
+| --- | --- |
+| 계정 | 회원가입하고 로그인하거나 로그아웃합니다. |
+| 게임 탐색 | 게임 목록을 탐색하고 게임별 커뮤니티로 이동합니다. |
+| 게임별 프로필 | 게임별 프로필을 등록하고 다른 유저의 프로필을 검색합니다. |
+| 그룹 | 그룹 단위로 유저를 모아 함께 활동합니다. |
+| 친선경기 | 경기를 찾거나 모집하고, 참가를 신청한 뒤 신청 상태를 확인합니다. 주최자는 신청을 승인하거나 거절합니다. |
+| 게시판 | 게임별 게시글 목록과 상세 내용을 보고 새 글을 작성합니다. |
 
-- DB 다이어그램: [GameMatch DB Diagram](https://dbdiagram.io/d/6a4a1df736d348d1206ca849)
-- URL: https://dbdiagram.io/d/6a4a1df736d348d1206ca849
-
-주요 기준은 다음과 같습니다.
-
-- `users`, `game`, `game_user`, `game_group`, `friendly_match`, `match_request`, `match_participation` 중심으로 도메인을 나눕니다.
-- 중복 생성 방지는 애플리케이션 로직보다 DB `unique constraint`를 우선합니다.
-- 매칭 승인, 참가 확정, 모집 마감처럼 상태가 바뀌는 작업은 낙관적 락 또는 비관적 락으로 race condition을 관리합니다.
-- 게시글 추천/비추천은 `post_vote` 테이블로 1인 1상태를 관리하고, 카운터는 atomic update로 처리합니다.
-- Outbox는 초기 구현 범위에서는 제외하고, 외부 알림이나 메시지 발행 보장이 필요해질 때 도입합니다.
+**대표 이용 흐름**은 경기 찾기 → 참가 신청 → 주최자 승인 → 참가 확정입니다.
 
 ## 기술 스택
 
-- Java 17
-- Spring Boot
-- Gradle
-- Spring Data JPA
+![Java 17](https://img.shields.io/badge/Java-17-007396?style=flat-square&logo=openjdk&logoColor=white) ![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4E8528?style=flat-square&logo=springboot&logoColor=white) ![Spring Security](https://img.shields.io/badge/Spring%20Security-4E8528?style=flat-square&logo=springsecurity&logoColor=white) ![Spring Data JPA](https://img.shields.io/badge/Spring%20Data%20JPA-4E8528?style=flat-square&logo=spring&logoColor=white)
 
-## AI 에이전트 협업 방식
+![MySQL](https://img.shields.io/badge/MySQL-4479A1?style=flat-square&logo=mysql&logoColor=white) ![Flyway](https://img.shields.io/badge/Flyway-CC0200?style=flat-square&logo=flyway&logoColor=white) ![Gradle](https://img.shields.io/badge/Gradle-02303A?style=flat-square&logo=gradle&logoColor=white)
 
-이 프로젝트는 사람이 최종 의사결정권을 갖는 역할 기반 멀티 에이전트 개발 방식을 사용합니다. 하나의 AI가 모든 단계를 처리하는 대신, 작업을 역할별로 분리하고 결과를 교차 검증합니다.
-
-기본 흐름은 다음과 같습니다.
-
-`분석 → API 계약 확인 → 사람의 학습 모드 선택 → 구현 → 테스트 및 독립 리뷰 → 결과 취합`
-
-- **코디네이터**: 작업 범위를 조율하고, 각 역할의 결과와 남은 위험을 취합합니다.
-- **분석 담당**: 기존 구조와 요구사항, 변경 영향을 확인합니다.
-- **API 계약 담당**: 요청·응답 형식이나 정책이 불명확할 때 명세를 정리하며, 사람의 승인을 받은 뒤 진행합니다.
-- **구현 담당**: 승인된 범위 안에서 기능을 구현합니다.
-- **테스트 담당**: 정상·실패·경계 조건을 독립적으로 검증합니다.
-- **독립 리뷰 담당**: 구현 과정과 분리된 관점에서 설계, 안정성, 유지보수 위험을 검토합니다.
-
-구현 전에는 사람이 다음 중 하나를 선택합니다.
-
-- `initial-code`: 사람이 Controller, Service 또는 도메인 코드의 첫 구현을 작성한 뒤 AI가 이어서 작업합니다.
-- `review-first`: AI 구현을 허용하되, 테스트와 리뷰 전에 사람이 먼저 변경 내용을 검토합니다.
-
-인증·권한·매칭 규칙·DB 정합성처럼 변경 위험이 큰 영역은 필요 시 추가 독립 리뷰를 제안하며, 이 경우에는 사람의 승인 후에만 합의형 리뷰를 진행합니다. 에이전트 간에는 분석 결과와 테스트·리뷰 피드백을 전달할 수 있지만, 제품 정책이나 되돌리기 어려운 결정은 사람이 승인합니다.
-
-## GitHub·Jira 협업 및 자동화
-
-상세 절차와 자동화 조건은 [Jira·GitHub 작업 흐름](docs/jira-github-workflow.md)을 기준으로 관리합니다.
-
-### 현재 연결 상태
-
-- Jira Cloud와 GitHub는 공식 연동 앱으로 연결되어 있습니다.
-- Jira 작업 키(예: `GM-5`)를 브랜치 이름, 커밋 메시지, PR 제목 또는 본문에 포함하면 해당 개발 활동을 Jira 작업과 연결할 수 있습니다.
-- Codex는 Jira와 GitHub 각각의 전용 연결을 사용해 이슈·브랜치·PR 정보를 관리합니다. Jira 상태 변경은 전용 연결이 아니라 아래 Jira 자동화 규칙이 담당합니다.
-- GitHub 이슈와 Jira 작업을 중복 생성하지 않습니다. 작업 관리의 기준은 Jira이며, GitHub는 코드·브랜치·PR 이력을 담당합니다.
-
-### 활성화된 자동화
-
-- GitHub Actions `Backend CI`: 모든 브랜치 푸시와 `main` 대상 PR에서 `./gradlew test`를 실행합니다.
-- PR 양식: Jira 키, 변경 내용, 로컬 테스트 결과, 병합 전 확인 항목을 안내합니다.
-- 데스크톱 Git 저장소는 `.githooks/prepare-commit-msg`를 사용해 브랜치명에 있는 Jira 키를 커밋 메시지에 자동 삽입합니다.
-
-### 상태 자동화 정책
-
-아래 Jira 자동화 규칙을 사용합니다.
-
-- Jira 키가 포함된 브랜치 생성: `할 일 → 진행 중`
-- 연결된 PR 생성: `진행 중 → 검토 중`
-- 병합하지 않고 PR 닫기: `검토 중 → 진행 중`
-- 연결된 PR을 `main`에 병합: `검토 중 → 완료`
-
-WIP 커밋을 브랜치에 푸시하는 행위는 작업 상태를 완료로 바꾸지 않습니다. 다른 컴퓨터에서는 같은 원격 브랜치를 받아 작업을 이어갈 수 있습니다.
-
-### 기본 작업 흐름
-
-1. Jira에서 작업을 만들고 작업 키를 확인합니다.
-2. 키를 포함한 기능 브랜치를 만듭니다. 예: `feature/GM-5-game-not-found-404`
-3. 데스크톱에서는 커밋 메시지에 키가 자동 삽입되는지 확인하고, iPad Spck 단독 앱에서는 키를 직접 넣습니다.
-4. 미완성 상태라도 WIP 커밋을 원격 브랜치에 푸시해 다른 컴퓨터에서 이어서 작업할 수 있습니다.
-5. 완료된 작업만 PR로 검토하고, GitHub Actions와 코드리뷰가 통과한 뒤 사람의 명시적 승인으로 `main`에 병합합니다.
-6. 병합 후 원격 feature 브랜치를 삭제하고, 로컬 브랜치와 오래된 원격 참조를 정리합니다.
-
+[로컬 실행 안내](docs/local-setup.md)
