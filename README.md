@@ -3,9 +3,7 @@
 게임별 커뮤니티에서 유저를 찾고, 친선경기를 모집하거나 참가를 신청하는 서비스입니다.
 
 <p align="center">
-  <a href="docs/api.md"><img src="https://img.shields.io/badge/API%20%EB%AA%85%EC%84%B8-334155?style=for-the-badge&amp;logo=bookstack&amp;logoColor=white" alt="API 명세"></a>
-  <a href="docs/architecture.md"><img src="https://img.shields.io/badge/%EC%95%84%ED%82%A4%ED%85%8D%EC%B2%98-334155?style=for-the-badge&amp;logo=diagramsdotnet&amp;logoColor=white" alt="아키텍처"></a>
-  <a href="docs/core-implementation.md"><img src="https://img.shields.io/badge/%ED%95%B5%EC%8B%AC%20%EA%B5%AC%ED%98%84-334155?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="핵심 구현"></a>
+  <a href="https://github.com/GameMatch-Dev/Game_Match_BE/wiki"><img src="https://img.shields.io/badge/%EA%B0%9C%EB%B0%9C%20%EB%AC%B8%EC%84%9C-334155?style=for-the-badge&amp;logo=bookstack&amp;logoColor=white" alt="개발 문서"></a>
   <a href="https://github.com/Siwon-Choi/Game_Match_FE"><img src="https://img.shields.io/badge/%ED%94%84%EB%9F%B0%ED%8A%B8%EC%97%94%EB%93%9C-334155?style=for-the-badge&amp;logo=github&amp;logoColor=white" alt="프런트엔드"></a>
 </p>
 
