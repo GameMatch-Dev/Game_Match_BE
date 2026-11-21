@@ -49,7 +49,7 @@ public class FriendlyMatchJpaEntity {
     private FriendlyMatchState state;
 
     @Column(nullable = false)
-    private Integer recruit;
+    private Integer capacity;
 
     @Column(nullable = false, length = 500)
     private String comment;
@@ -61,7 +61,7 @@ public class FriendlyMatchJpaEntity {
             LocalTime time,
             FriendlyMatchSort sort,
             FriendlyMatchState state,
-            Integer recruit,
+            Integer capacity,
             String comment
     ) {
         this.hostGameUserId = hostGameUserId;
@@ -70,7 +70,7 @@ public class FriendlyMatchJpaEntity {
         this.time = time;
         this.sort = sort;
         this.state = state;
-        this.recruit = recruit;
+        this.capacity = capacity;
         this.comment = comment;
     }
 
@@ -83,7 +83,7 @@ public class FriendlyMatchJpaEntity {
                 friendlyMatch.time(),
                 friendlyMatch.sort(),
                 friendlyMatch.state(),
-                friendlyMatch.recruit(),
+                friendlyMatch.capacity(),
                 friendlyMatch.comment()
         );
     }

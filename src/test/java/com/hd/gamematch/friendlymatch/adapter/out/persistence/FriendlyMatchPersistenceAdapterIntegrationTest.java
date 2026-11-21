@@ -60,7 +60,7 @@ class FriendlyMatchPersistenceAdapterIntegrationTest {
         assertThat(savedEntity.getTime()).isEqualTo(LocalTime.of(20, 0));
         assertThat(savedEntity.getSort()).isEqualTo(FriendlyMatchSort.TEAM);
         assertThat(savedEntity.getState()).isEqualTo(FriendlyMatchState.RECRUITING);
-        assertThat(savedEntity.getRecruit()).isEqualTo(5);
+        assertThat(savedEntity.getCapacity()).isEqualTo(5);
         assertThat(savedEntity.getComment()).isEqualTo("저녁에 같이 하실 분");
     }
 }

@@ -66,7 +66,7 @@ class CreateFriendlyMatchServiceTest {
                 command.time(),
                 command.sort(),
                 FriendlyMatchState.RECRUITING,
-                command.recruit(),
+                command.capacity(),
                 command.comment()
         );
 
@@ -94,7 +94,7 @@ class CreateFriendlyMatchServiceTest {
         assertThat(creatingFriendlyMatch.time()).isEqualTo(command.time());
         assertThat(creatingFriendlyMatch.sort()).isEqualTo(FriendlyMatchSort.TEAM);
         assertThat(creatingFriendlyMatch.state()).isEqualTo(FriendlyMatchState.RECRUITING);
-        assertThat(creatingFriendlyMatch.recruit()).isEqualTo(5);
+        assertThat(creatingFriendlyMatch.capacity()).isEqualTo(5);
         assertThat(creatingFriendlyMatch.comment()).isEqualTo("저녁에 같이 하실 분");
     }
 

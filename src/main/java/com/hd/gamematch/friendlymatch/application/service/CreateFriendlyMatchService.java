@@ -48,7 +48,7 @@ public class CreateFriendlyMatchService implements CreateFriendlyMatchUseCase {
                 command.time(),
                 command.sort(),
                 FriendlyMatchState.RECRUITING,
-                command.recruit(),
+                command.capacity(),
                 command.comment()
         );
 

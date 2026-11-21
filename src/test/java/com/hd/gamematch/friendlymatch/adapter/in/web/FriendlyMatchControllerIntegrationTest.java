@@ -74,7 +74,7 @@ class FriendlyMatchControllerIntegrationTest {
                                   "date": "2027-06-10",
                                   "time": "20:00:00",
                                   "sort": 0,
-                                  "recruit": 5,
+                                  "capacity": 5,
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """.formatted(savedHost.getId(), savedGame.getId())))
@@ -85,6 +85,7 @@ class FriendlyMatchControllerIntegrationTest {
                 .andExpect(jsonPath("$.data.host.id").value(savedHost.getId()))
                 .andExpect(jsonPath("$.data.host.nickname").value("hostA"))
                 .andExpect(jsonPath("$.data.game.id").value(savedGame.getId()))
+                .andExpect(jsonPath("$.data.capacity").value(5))
                 .andExpect(jsonPath("$.data.state").value(0));
 
         // flush와 clear 후 DB를 다시 읽어, HTTP 응답뿐 아니라 실제 저장값도 검증한다.
@@ -94,7 +95,7 @@ class FriendlyMatchControllerIntegrationTest {
         FriendlyMatchJpaEntity savedFriendlyMatch = friendlyMatchJpaRepository.findAll().get(0);
         assertThat(savedFriendlyMatch.getHostGameUserId()).isEqualTo(savedHost.getId());
         assertThat(savedFriendlyMatch.getGameId()).isEqualTo(savedGame.getId());
-        assertThat(savedFriendlyMatch.getRecruit()).isEqualTo(5);
+        assertThat(savedFriendlyMatch.getCapacity()).isEqualTo(5);
         assertThat(savedFriendlyMatch.getComment()).isEqualTo("저녁에 같이 하실 분");
     }
 
@@ -111,7 +112,7 @@ class FriendlyMatchControllerIntegrationTest {
                                   "date": "2027-06-10",
                                   "time": "20:00:00",
                                   "sort": 0,
-                                  "recruit": 5,
+                                  "capacity": 5,
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """))
@@ -142,7 +143,7 @@ class FriendlyMatchControllerIntegrationTest {
                                   "date": "2027-06-10",
                                   "time": "20:00:00",
                                   "sort": 0,
-                                  "recruit": 5,
+                                  "capacity": 5,
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """))
@@ -181,7 +182,7 @@ class FriendlyMatchControllerIntegrationTest {
                                   "date": "2027-06-10",
                                   "time": "20:00:00",
                                   "sort": 0,
-                                  "recruit": 5,
+                                  "capacity": 5,
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """.formatted(anotherUsersHost.getId(), savedGame.getId())))

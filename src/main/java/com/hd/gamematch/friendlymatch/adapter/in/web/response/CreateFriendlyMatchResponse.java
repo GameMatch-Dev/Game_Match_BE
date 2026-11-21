@@ -14,7 +14,7 @@ public record CreateFriendlyMatchResponse(
         LocalTime time,
         Integer sort,
         Integer state,
-        Integer recruit,
+        Integer capacity,
         String comment
 ) {
 
@@ -31,7 +31,7 @@ public record CreateFriendlyMatchResponse(
                 friendlyMatch.time(),
                 friendlyMatch.sort().ordinal(),
                 friendlyMatch.state().ordinal(),
-                friendlyMatch.recruit(),
+                friendlyMatch.capacity(),
                 friendlyMatch.comment()
         );
     }

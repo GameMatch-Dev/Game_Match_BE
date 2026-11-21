@@ -18,7 +18,7 @@ public record FriendlyMatch(
         LocalTime time,
         FriendlyMatchSort sort,
         FriendlyMatchState state,
-        Integer recruit,
+        Integer capacity,
         String comment
 ) {
 
@@ -30,7 +30,7 @@ public record FriendlyMatch(
         Objects.requireNonNull(time, "time은 필수입니다.");
         Objects.requireNonNull(sort, "sort는 필수입니다.");
         Objects.requireNonNull(state, "state는 필수입니다.");
-        Objects.requireNonNull(recruit, "recruit는 필수입니다.");
+        Objects.requireNonNull(capacity, "capacity는 필수입니다.");
         Objects.requireNonNull(comment, "comment는 필수입니다.");
     }
 }

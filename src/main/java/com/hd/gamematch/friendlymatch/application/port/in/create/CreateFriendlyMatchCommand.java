@@ -15,7 +15,7 @@ public record CreateFriendlyMatchCommand(
         LocalDate date,
         LocalTime time,
         FriendlyMatchSort sort,
-        Integer recruit,
+        Integer capacity,
         String comment
 ) {
 
@@ -27,7 +27,7 @@ public record CreateFriendlyMatchCommand(
             LocalDate date,
             LocalTime time,
             FriendlyMatchSort sort,
-            Integer recruit,
+            Integer capacity,
             String comment
     ) {
         return new CreateFriendlyMatchCommand(
@@ -37,7 +37,7 @@ public record CreateFriendlyMatchCommand(
                 date,
                 time,
                 sort,
-                recruit,
+                capacity,
                 comment
         );
     }

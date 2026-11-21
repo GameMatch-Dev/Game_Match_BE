@@ -28,7 +28,7 @@ public class FriendlyMatchPersistenceAdapter implements SaveFriendlyMatchPort {
                 savedEntity.getTime(),
                 savedEntity.getSort(),
                 savedEntity.getState(),
-                savedEntity.getRecruit(),
+                savedEntity.getCapacity(),
                 savedEntity.getComment()
         );
     }

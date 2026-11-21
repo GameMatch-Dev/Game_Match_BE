@@ -82,7 +82,7 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                                   "date": "2027-06-10",
                                   "time": "20:00:00",
                                   "sort": 0,
-                                  "recruit": 5,
+                                  "capacity": 5,
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """))
@@ -93,6 +93,7 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.data.host.id").value(10L))
                 .andExpect(jsonPath("$.data.host.nickname").value("hostA"))
                 .andExpect(jsonPath("$.data.game.id").value(1L))
+                .andExpect(jsonPath("$.data.capacity").value(5))
                 .andExpect(jsonPath("$.data.state").value(0));
     }
 
@@ -125,7 +126,7 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                                   "date": "2027-06-10",
                                   "time": "20:00:00",
                                   "sort": 0,
-                                  "recruit": 5,
+                                  "capacity": 5,
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """))
@@ -163,7 +164,7 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                                   "date": "2027-06-10",
                                   "time": "20:00:00",
                                   "sort": 0,
-                                  "recruit": 5,
+                                  "capacity": 5,
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """))
@@ -202,7 +203,7 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                                   "date": "2027-06-10",
                                   "time": "20:00:00",
                                   "sort": 0,
-                                  "recruit": 5,
+                                  "capacity": 5,
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """))
@@ -226,7 +227,7 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                                   "date": "2027-06-10",
                                   "time": "20:00:00",
                                   "sort": 2,
-                                  "recruit": 5,
+                                  "capacity": 5,
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """))
@@ -235,10 +236,10 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
     }
 
-    // 모집 정원은 한 계정 이상이어야 한다.
+    // 참가 정원은 한 명 이상이어야 한다.
     @Test
-    void 모집_정원이_0이면_친선_경기_모집을_생성할_수_없다() throws Exception {
-        // when & then: 0명 모집 요청은 Service 호출 전에 요청 오류로 처리한다.
+    void 참가_정원이_0이면_친선_경기_모집을_생성할_수_없다() throws Exception {
+        // when & then: 0명 정원 요청은 Service 호출 전에 요청 오류로 처리한다.
         mockMvc.perform(post("/friendly-matches")
                         .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -250,7 +251,30 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                                   "date": "2027-06-10",
                                   "time": "20:00:00",
                                   "sort": 0,
-                                  "recruit": 0,
+                                  "capacity": 0,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    // 참가 정원은 친선 경기 생성에 필요한 필수값이다.
+    @Test
+    void 참가_정원이_없으면_친선_경기_모집을_생성할_수_없다() throws Exception {
+        // when & then: capacity가 없는 요청은 Service 호출 전에 요청 오류로 처리한다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 10,
+                                  "gameId": 1,
+                                  "date": "2027-06-10",
+                                  "time": "20:00:00",
+                                  "sort": 0,
                                   "comment": "저녁에 같이 하실 분"
                                 }
                                 """))
