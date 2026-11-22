@@ -3,7 +3,6 @@ package com.hd.gamematch.global.exception;
 import com.hd.gamematch.global.exception.code.CommonErrorCode;
 import com.hd.gamematch.global.response.CommonResponse;
 import jakarta.validation.ConstraintViolationException;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -43,19 +42,6 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<CommonResponse<Void>> handleMethodArgumentNotValid(
             MethodArgumentNotValidException exception
-    ) {
-        return ResponseEntity.status(CommonErrorCode.COMMON_400.status())
-                .body(new CommonResponse<>(
-                        false,
-                        CommonErrorCode.COMMON_400.code(),
-                        CommonErrorCode.COMMON_400.defaultMessage(),
-                        null
-                ));
-    }
-
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<CommonResponse<Void>> handleHttpMessageNotReadable(
-            HttpMessageNotReadableException exception
     ) {
         return ResponseEntity.status(CommonErrorCode.COMMON_400.status())
                 .body(new CommonResponse<>(
