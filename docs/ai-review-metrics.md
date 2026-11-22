@@ -13,6 +13,17 @@ This is an experiment log, not a scorecard. Record facts from tool output; leave
 | 2026-09-01 | GameUser search contract analysis | `3085b6d` | Planning preflight | backend analyst pending | not invoked | not applicable | pending | pending | UNAVAILABLE | UNAVAILABLE | pending | Weekly remaining quotas are not exposed; analysis is read-only and does not create an implementation scope without human approval. |
 | 2026-09-01 | GameUser search API contract | `3085b6d` | Contract preflight | API contract agent pending | not invoked | not applicable | pending | pending | UNAVAILABLE | UNAVAILABLE | pending | Weekly remaining quotas are not exposed; the contract requires human approval before any implementation scope is created. |
 
+## 2026-11-23 GM-34 closure
+
+- Baseline3b8ee99, existing human-authored tracked changes; analyst, independent test engineer and independent reviewer separated.
+- Executed tests: `.\gradlew.bat test --rerun-tasks`, exit0,35s,148 tests,failures/errors/skipped0.
+- Claude direct static review: valid structured_output,3 findings,ACCEPT0/REJECT3; adjudication in `docs/GM-34-api-end-review.md`.
+- Claude usage: input2/cache creation23162/cache read0/output16351; $0.27392;168.217s.
+- Codex pre-dispatch weekly remaining91%,5h44%; pre-Claude weekly90%,5h38%; Claude weekly quota UNAVAILABLE. No reset/credits used.
+- Explicit human approval covered sending GM-34 requirement/diff/context/test evidence to Anthropic after automatic approval review initially blocked it.
+- Integration into GM-35:192 tests passed,40s; duplicate shared JSON handler removed; independent integration review found no further issue.
+- Actual MySQL concurrency/snapshot validation was not performed. No main merge or deployment.
+
 ## Comparison rules
 
 Use comparable tasks or known-defect cases. Hold the requirement, Git baseline, acceptance criteria, test command, and review time budget fixed. Track:
