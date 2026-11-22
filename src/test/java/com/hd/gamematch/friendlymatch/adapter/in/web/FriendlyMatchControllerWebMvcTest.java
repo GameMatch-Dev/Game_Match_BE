@@ -13,6 +13,7 @@ import com.hd.gamematch.global.exception.GlobalExceptionHandler;
 import com.hd.gamematch.support.security.SecuredWebMvcTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
@@ -316,6 +317,39 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
 
         // 입력 검증에서 거부했으므로 생성 UseCase를 호출하지 않는다.
+        then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
+    }
+
+    // 게임 ID 누락, 0, 음수는 입력 검증에서 거부한다.
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(longs = {0L, -1L})
+    void 게임_ID가_없거나_양수가_아니면_400_응답을_반환한다(Long gameId) throws Exception {
+        // null 케이스는 JSON에서 gameId 자체를 생략해 누락 요청을 검증한다.
+        String gameIdField = gameId == null ? "" : "\"gameId\": " + gameId + ",";
+
+        // when: 호스트 등 나머지 입력은 정상으로 두고 게임 ID만 바꾼다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 10,
+                                  %s
+                                  "date": "2027-06-10",
+                                  "time": "20:00:00",
+                                  "sort": 0,
+                                  "capacity": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """.formatted(gameIdField)))
+                // then: 잘못된 게임 ID는 공통 400 응답으로 반환한다.
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+
+        // 입력 검증 실패이므로 게임 확인이나 매치 생성 작업을 시작하지 않는다.
         then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
     }
 
