@@ -139,14 +139,14 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 UpdateGameUserNicknameCommand.of(3L, 1L, "newPlayer")
         )).willReturn(updatedProfile);
 
-        // when & then
+        // 요청 DTO가 앞뒤 공백을 제거한 값을 UseCase에 전달한다.
         mockMvc.perform(patch("/game-users/{gameUserId}", 1L)
                         .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "nickname": "newPlayer"
+                                  "nickname": "  newPlayer  "
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -160,6 +160,7 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
 
     @Test
     void 다른_사용자가_사용_중인_닉네임으로_수정하면_409_응답을_반환한다() throws Exception {
+        // 중복 검사에도 요청 경계에서 정규화한 닉네임이 전달된다.
         given(updateGameUserNicknameUseCase.updateNickname(
                 UpdateGameUserNicknameCommand.of(3L, 1L, "duplicatedName")
         )).willThrow(new GameUserNicknameAlreadyInUseException());
@@ -170,7 +171,7 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                         .accept(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "nickname": "duplicatedName"
+                                  "nickname": "  duplicatedName  "
                                 }
                                 """))
                 .andExpect(status().isConflict())
@@ -259,6 +260,77 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
     }
 
     @Test
+    void 게임_프로필_ID가_음수이면_닉네임_수정에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(patch("/game-users/{gameUserId}", -1L)
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "newPlayer"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.message").value("잘못된 요청입니다."))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+
+        then(updateGameUserNicknameUseCase).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 숫자가_아닌_게임_프로필_ID이면_닉네임_수정에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(patch("/game-users/abc")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "nickname": "newPlayer"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.message").value("잘못된 요청입니다."))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+
+        then(updateGameUserNicknameUseCase).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 요청_본문이_없으면_게임_프로필_수정에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(patch("/game-users/{gameUserId}", 1L)
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.message").value("잘못된 요청입니다."))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+
+        then(updateGameUserNicknameUseCase).shouldHaveNoInteractions();
+    }
+
+    @Test
+    void 읽을_수_없는_요청_본문이면_게임_프로필_수정에_400_응답을_반환한다() throws Exception {
+        mockMvc.perform(patch("/game-users/{gameUserId}", 1L)
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("{\"nickname\":"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"))
+                .andExpect(jsonPath("$.message").value("잘못된 요청입니다."))
+                .andExpect(jsonPath("$.data").value(nullValue()));
+
+        then(updateGameUserNicknameUseCase).shouldHaveNoInteractions();
+    }
+
+    @Test
     void 닉네임이_공백이면_게임_프로필_수정에_400_응답을_반환한다() throws Exception {
         mockMvc.perform(patch("/game-users/{gameUserId}", 1L)
                         .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
@@ -278,7 +350,7 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
 
     @Test
     void 기존과_같은_닉네임으로_게임_프로필을_수정하면_200_응답을_반환한다() throws Exception {
-        // given: 같은 값을 다시 보내도 리소스 상태는 그대로이며, 성공으로 응답한다.
+        // 공백 제거 후 기존 값과 같으면 리소스 상태를 유지하고 성공으로 응답한다.
         GameUserProfile profile = new GameUserProfile(
                 1L,
                 "playerA",
@@ -295,7 +367,7 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                         .accept(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "nickname": "playerA"
+                                  "nickname": "  playerA  "
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -363,7 +435,8 @@ class GameUserControllerWebMvcTest extends SecuredWebMvcTestSupport {
                         .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("COMMON_400"));
+                .andExpect(jsonPath("$.code").value(
+                        "COMMON_400"));
     }
 
     @Test

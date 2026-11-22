@@ -85,6 +85,23 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
+    void 닉네임_UPDATE의_게임과_닉네임_중복_제약_위반을_업무_예외로_변환한다() {
+        // 같은 게임에 서로 다른 닉네임을 사용하는 두 프로필을 정상 저장한다.
+        // 이후 한 프로필을 이미 사용 중인 닉네임으로 변경해 UPDATE 제약 위반을 발생시킨다.
+        GameUserJpaEntity target = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(1L, 10L, "playerA")
+        );
+        gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(2L, 10L, "playerB")
+        );
+        entityManager.clear();
+
+        // 동시성 자체가 아니라 Adapter가 실행한 UPDATE의 제약 위반을 업무 예외로 바꾸는지 검증한다.
+        assertThatThrownBy(() -> gameUserPersistenceAdapter.updateNickname(target.getId(), "playerB"))
+                .isInstanceOf(GameUserNicknameAlreadyInUseException.class);
+    }
+
+    @Test
     void 같은_사용자와_게임의_프로필이_있으면_참을_반환한다() {
         // Given: 이미 같은 사용자와 게임으로 저장된 프로필이 있다.
         gameUserPersistenceAdapter.save(
@@ -120,6 +137,9 @@ class GameUserPersistenceAdapterIntegrationTest {
     void 사용자와_게임_중복_제약_위반을_이미_등록됨_예외로_변환한다() {
         // Given: 이미 같은 사용자와 게임으로 저장된 프로필이 있다.
         gameUserPersistenceAdapter.save(
+
+
+
                 GameUser.create(1L, 10L, "playerA")
         );
 
@@ -223,6 +243,7 @@ class GameUserPersistenceAdapterIntegrationTest {
     @Test
     void 사용자와_게임에_해당하는_프로필이_없으면_빈_값을_반환한다() {
         var result = gameUserPersistenceAdapter.loadGameUserByUserIdAndGameId(999L, 10L);
+
 
         assertThat(result).isEmpty();
     }
