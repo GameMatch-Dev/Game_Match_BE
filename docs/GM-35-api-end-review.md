@@ -80,3 +80,18 @@ ordinal 수정에 대한 잔여 finding은 없었다. 원래 ACCEPT한 두 항�
 - 이 단계에서 새 Claude 리뷰나 Codex 독립 리뷰를 실행하지 않았다.
   기존 리뷰 기록을 유지하며 원래 GM-34 작업 폴더의 미커밋 변경은 옮기지 않았다.
 - GM-34의 main 병합과 Jira 접근 복구는 여전히 별도 남은 조건이다.
+
+## GM-34 남은 변경 최종 통합
+
+- GM-34의 미커밋 변경은 85132d2/84edf8b/ca7bf8a로 정리했고 PR #31을 생성했다.
+  이제 선행 변경 미반영 조건은 해소됐다. 미추적 실험/워크트리 파일은 제외했다.
+- GM-35 merge4521538 이후 중복 JSON 처리기만 94de3c3에서 제거했다.
+  Resource Server 인증과 사용자 ID 추출은 유지했다. 별도 독립 재검토 findings 없음.
+- 전체 테스트 exit0,40초,192개 통과,실패/오류/생략0.
+  94de3c3의 Backend CI run45049218696 성공.
+- GM-34 자체는 독립 테스트148개 통과 및 Codex 독립 리뷰 완료.
+  Claude3건은 개별 REJECT로 판정했고 `docs/GM-34-api-end-review.md`에 근거와 비용을 기록했다.
+  이 GM-34 리뷰를 GM-35 전체의 새 Claude 재리뷰로 세지 않는다.
+- 작업 후 Codex 주간 잔여89%,5시간 잔여32%; Claude 주간 잔여 UNAVAILABLE.
+- GM-34 main 병합과 Jira suspended-inactivity는 여전히 남아 있다.
+  코드 작업 완료와 원격 main 병합 완료를 구분한다.
