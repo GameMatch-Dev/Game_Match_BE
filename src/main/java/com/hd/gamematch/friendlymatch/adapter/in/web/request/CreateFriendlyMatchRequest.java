@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 public record CreateFriendlyMatchRequest(
-        @NotNull Long hostGameUserId,
+        @NotNull @Positive Long hostGameUserId,
         Long gameId,
         LocalDate date,
         LocalTime time,

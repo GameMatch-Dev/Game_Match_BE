@@ -12,6 +12,8 @@ import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import com.hd.gamematch.global.exception.GlobalExceptionHandler;
 import com.hd.gamematch.support.security.SecuredWebMvcTestSupport;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.security.oauth2.client.autoconfigure.servlet.OAuth2ClientWebSecurityAutoConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -285,6 +287,35 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
 
         // 잘못된 입력으로 생성 작업을 시작하지 않았는지도 확인한다.
+        then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
+    }
+
+    // 0과 음수 ID는 프로필 조회를 시작하기 전에 입력 오류로 거부한다.
+    @ParameterizedTest
+    @ValueSource(longs = {0L, -1L})
+    void 호스트_게임_프로필_ID가_양수가_아니면_400_응답을_반환한다(Long hostGameUserId) throws Exception {
+        // when: 다른 값은 정상으로 두고 호스트 ID만 0 또는 음수로 보낸다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": %d,
+                                  "gameId": 1,
+                                  "date": "2027-06-10",
+                                  "time": "20:00:00",
+                                  "sort": 0,
+                                  "capacity": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """.formatted(hostGameUserId)))
+                // then: 잘못된 ID는 공통 400 응답으로 반환한다.
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+
+        // 입력 검증에서 거부했으므로 생성 UseCase를 호출하지 않는다.
         then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
     }
 
