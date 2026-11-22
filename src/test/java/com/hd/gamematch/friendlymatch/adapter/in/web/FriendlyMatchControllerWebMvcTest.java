@@ -25,6 +25,7 @@ import java.time.LocalDate;
 import java.time.LocalTime;
 
 import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -258,6 +259,33 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
+    }
+
+    // 호스트 프로필이 없는 요청은 Service를 호출하기 전에 거부한다.
+    @Test
+    void 호스트_게임_프로필_ID가_없으면_400_응답을_반환한다() throws Exception {
+        // when: 인증은 정상이지만 hostGameUserId를 생략한 요청을 보낸다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "gameId": 1,
+                                  "date": "2027-06-10",
+                                  "time": "20:00:00",
+                                  "sort": 0,
+                                  "capacity": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """))
+                // then: 입력 검증 실패를 공통 400 응답으로 반환한다.
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+
+        // 잘못된 입력으로 생성 작업을 시작하지 않았는지도 확인한다.
+        then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
     }
 
     // 참가 정원은 친선 경기 생성에 필요한 필수값이다.
