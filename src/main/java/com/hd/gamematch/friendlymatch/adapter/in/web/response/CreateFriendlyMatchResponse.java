@@ -29,8 +29,14 @@ public record CreateFriendlyMatchResponse(
                 GameResponse.from(friendlyMatch.game()),
                 friendlyMatch.date(),
                 friendlyMatch.time(),
-                friendlyMatch.sort().ordinal(),
-                friendlyMatch.state().ordinal(),
+                // 공개 응답 값은 enum 선언 순서와 분리해 명시적으로 매핑한다.
+                switch (friendlyMatch.sort()) {
+                    case TEAM -> 0;
+                    case INDIVIDUAL -> 1;
+                },
+                switch (friendlyMatch.state()) {
+                    case RECRUITING -> 0;
+                },
                 friendlyMatch.capacity(),
                 friendlyMatch.comment()
         );

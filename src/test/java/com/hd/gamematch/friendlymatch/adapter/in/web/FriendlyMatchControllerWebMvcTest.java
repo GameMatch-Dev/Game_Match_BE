@@ -483,6 +483,43 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
         then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
     }
 
+    // 정수 필드에 소수를 보내면 잘라서 사용하지 않고 입력 오류로 거부한다.
+    @ParameterizedTest
+    @CsvSource({
+            "10, 1, 0, 1.5",
+            "10, 1, 0.5, 5",
+            "10.5, 1, 0, 5",
+            "10, 1.5, 0, 5"
+    })
+    void 정수_필드에_소수를_보내면_400을_반환한다(
+            String hostId, String gameId, String sort, String capacity
+    ) throws Exception {
+        // 파싱이 잘못 통과해도 NPE로 숨겨지지 않도록 정상 생성 결과를 준비한다.
+        Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
+        GameUserProfile host = new GameUserProfile(10L, "hostA", game, 3L);
+        FriendlyMatch result = new FriendlyMatch(
+                100L, host, game, LocalDate.of(2027, 6, 10), LocalTime.of(20, 0),
+                FriendlyMatchSort.TEAM, FriendlyMatchState.RECRUITING, 5, "정상 소개");
+        given(createFriendlyMatchUseCase.create(org.mockito.ArgumentMatchers.any())).willReturn(result);
+
+        // 각 요청에서는 정수 필드 한 개에만 소수를 넣는다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": %s, "gameId": %s,
+                                  "date": "2027-06-10", "time": "20:00:00",
+                                  "sort": %s, "capacity": %s, "comment": "정상 소개"
+                                }
+                                """.formatted(hostId, gameId, sort, capacity)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+
+        // 유효하지 않은 숫자가 생성 로직에 전달되지 않아야 한다.
+        then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
+    }
+
     // 참가 정원은 친선 경기 생성에 필요한 필수값이다.
     @Test
     void 참가_정원이_없으면_친선_경기_모집을_생성할_수_없다() throws Exception {

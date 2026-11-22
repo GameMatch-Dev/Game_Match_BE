@@ -6,16 +6,21 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.NotBlank;
+import tools.jackson.databind.annotation.JsonDeserialize;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 public record CreateFriendlyMatchRequest(
+        @JsonDeserialize(using = FriendlyMatchIntegerDeserializers.LongValue.class)
         @NotNull @Positive Long hostGameUserId,
+        @JsonDeserialize(using = FriendlyMatchIntegerDeserializers.LongValue.class)
         @NotNull @Positive Long gameId,
         @NotNull LocalDate date,
         @NotNull LocalTime time,
+        @JsonDeserialize(using = FriendlyMatchIntegerDeserializers.IntegerValue.class)
         Integer sort,
+        @JsonDeserialize(using = FriendlyMatchIntegerDeserializers.IntegerValue.class)
         @NotNull @Positive Integer capacity,
         @NotBlank @Size(max = 500) String comment
 ) {
