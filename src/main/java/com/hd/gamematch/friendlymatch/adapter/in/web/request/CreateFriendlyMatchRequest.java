@@ -4,6 +4,8 @@ import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyM
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
+import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.NotBlank;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -11,11 +13,11 @@ import java.time.LocalTime;
 public record CreateFriendlyMatchRequest(
         @NotNull @Positive Long hostGameUserId,
         @NotNull @Positive Long gameId,
-        LocalDate date,
-        LocalTime time,
+        @NotNull LocalDate date,
+        @NotNull LocalTime time,
         Integer sort,
         @NotNull @Positive Integer capacity,
-        String comment
+        @NotBlank @Size(max = 500) String comment
 ) {
 
     // HTTP JSON 요청값과 JWT에서 얻은 사용자 ID를 친선 경기 생성 Command로 변환한다.

@@ -11,6 +11,9 @@ import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserQuery;
 import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserUseCase;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
@@ -19,6 +22,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,6 +34,16 @@ import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
 class CreateFriendlyMatchServiceTest {
+
+    @Mock
+    private Clock clock;
+
+    @BeforeEach
+    void fixCurrentTime() {
+        // 현재 시간을 고정해 실행 날짜와 무관하게 경계값을 검증한다.
+        org.mockito.Mockito.lenient().when(clock.instant()).thenReturn(Instant.parse("2027-06-10T19:00:00Z"));
+        org.mockito.Mockito.lenient().when(clock.getZone()).thenReturn(ZoneOffset.UTC);
+    }
 
     @Mock
     private FindGameUserUseCase findGameUserUseCase;
@@ -96,6 +112,23 @@ class CreateFriendlyMatchServiceTest {
         assertThat(creatingFriendlyMatch.state()).isEqualTo(FriendlyMatchState.RECRUITING);
         assertThat(creatingFriendlyMatch.capacity()).isEqualTo(5);
         assertThat(creatingFriendlyMatch.comment()).isEqualTo("저녁에 같이 하실 분");
+    }
+
+    // 같은 날의 과거 시간과 현재 시각은 모집 가능한 미래 일시가 아니다.
+    @ParameterizedTest
+    @ValueSource(strings = {"18:59:59", "19:00:00"})
+    void 경기_일시가_현재_이하면_저장하지_않는다(String time) {
+        Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
+        GameUserProfile host = new GameUserProfile(10L, "hostA", game, 3L);
+        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(10L))).willReturn(host);
+        CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
+                3L, 10L, 1L, LocalDate.of(2027, 6, 10), LocalTime.parse(time),
+                FriendlyMatchSort.TEAM, 5, "정상 소개");
+
+        assertThatThrownBy(() -> createFriendlyMatchService.create(command))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("경기 일시는 현재보다 미래여야 합니다.");
+        then(saveFriendlyMatchPort).shouldHaveNoInteractions();
     }
 
     // 인증 사용자와 호스트 프로필 소유자가 다르면 타인의 프로필로 매치를 만들 수 없다.

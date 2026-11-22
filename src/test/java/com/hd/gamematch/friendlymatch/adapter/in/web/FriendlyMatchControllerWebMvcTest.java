@@ -13,6 +13,7 @@ import com.hd.gamematch.global.exception.GlobalExceptionHandler;
 import com.hd.gamematch.support.security.SecuredWebMvcTestSupport;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.NullSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -350,6 +351,135 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
                 .andExpect(jsonPath("$.code").value("COMMON_400"));
 
         // 입력 검증 실패이므로 게임 확인이나 매치 생성 작업을 시작하지 않는다.
+        then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
+    }
+
+    // 경기 날짜는 생성 요청의 필수값이다.
+    @Test
+    void 경기_날짜가_없으면_400_응답을_반환한다() throws Exception {
+        // when: date만 생략하고 나머지 필드는 정상값으로 보낸다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 10,
+                                  "gameId": 1,
+                                  "time": "20:00:00",
+                                  "sort": 0,
+                                  "capacity": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+
+        // then: 필수값 검증에서 거부되어 생성 로직을 실행하지 않는다.
+        then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
+    }
+
+    // 경기 시간는 생성 요청의 필수값이다.
+    @Test
+    void 경기_시간이_없으면_400_응답을_반환한다() throws Exception {
+        // when: time만 생략하고 나머지 필드는 정상값으로 보낸다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 10,
+                                  "gameId": 1,
+                                  "date": "2027-06-10",
+                                  "sort": 0,
+                                  "capacity": 5,
+                                  "comment": "저녁에 같이 하실 분"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+
+        // then: 필수값 검증에서 거부되어 생성 로직을 실행하지 않는다.
+        then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
+    }
+
+    // 소개 누락, 빈 문자열, 공백, 최대 길이 초과를 입력 오류로 거부한다.
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(ints = {0, 1, 501})
+    void 소개가_없거나_공백이거나_500자를_넘으면_400을_반환한다(Integer length) throws Exception {
+        // null 입력은 comment 필드를 생략하고, 501 입력은 길이 초과 문자열을 보낸다.
+        String commentField = length == null ? "" : ", \"comment\": \"" + (length > 1 ? "가" : " ").repeat(length) + "\"";
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 10, "gameId": 1,
+                                  "date": "2027-06-10", "time": "20:00:00",
+                                  "sort": 0, "capacity": 5
+                                  %s
+                                }
+                                """.formatted(commentField)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
+
+        // 유효하지 않은 소개는 생성 로직에 전달하지 않는다.
+        then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
+    }
+
+    // 최대 길이 경계인 500자는 정상 요청으로 처리한다.
+    @Test
+    void 소개가_500자이면_생성할_수_있다() throws Exception {
+        String comment = "가".repeat(500);
+        Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
+        GameUserProfile host = new GameUserProfile(10L, "hostA", game, 3L);
+        CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
+                3L, 10L, 1L, LocalDate.of(2027, 6, 10), LocalTime.of(20, 0),
+                FriendlyMatchSort.TEAM, 5, comment);
+        FriendlyMatch result = new FriendlyMatch(
+                100L, host, game, command.date(), command.time(), command.sort(),
+                FriendlyMatchState.RECRUITING, 5, comment);
+        given(createFriendlyMatchUseCase.create(command)).willReturn(result);
+
+        // 최대 허용 길이가 잘못 거부되거나 응답에서 잘리지 않는지 확인한다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 10, "gameId": 1,
+                                  "date": "2027-06-10", "time": "20:00:00",
+                                  "sort": 0, "capacity": 5, "comment": "%s"
+                                }
+                                """.formatted(comment)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.data.comment").value(comment));
+        then(createFriendlyMatchUseCase).should().create(command);
+    }
+
+    // 날짜와 시간의 파싱 오류는 생성 로직을 실행하지 않고 400으로 응답한다.
+    @ParameterizedTest
+    @CsvSource({
+            "2027-13-10, 20:00:00",
+            "2027-06-10, 25:00:00"
+    })
+    void 날짜나_시간_형식이_잘못되면_400을_반환한다(String date, String time) throws Exception {
+        mockMvc.perform(post("/friendly-matches")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": 10, "gameId": 1,
+                                  "date": "%s", "time": "%s",
+                                  "sort": 0, "capacity": 5, "comment": "정상 소개"
+                                }
+                                """.formatted(date, time)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("COMMON_400"));
         then(createFriendlyMatchUseCase).shouldHaveNoInteractions();
     }
 
