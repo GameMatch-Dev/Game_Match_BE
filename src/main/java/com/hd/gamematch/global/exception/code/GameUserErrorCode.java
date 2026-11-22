@@ -10,7 +10,7 @@ public enum GameUserErrorCode implements ErrorCode {
             "게임 프로필을 찾을 수 없습니다."
     ),
     GAME_USER_002(
-            HttpStatus.BAD_REQUEST,
+            HttpStatus.CONFLICT,
             "GAME_USER_002",
             "이미 해당 게임에서 사용 중인 닉네임입니다."
     ),
