@@ -58,6 +58,8 @@ class UpdateGameUserNicknameServiceTest {
         assertThat(result.nickname()).isEqualTo("newPlayer");
         assertThat(result.game()).isEqualTo(profile.game());
         assertThat(result.userId()).isEqualTo(3L);
+        then(existsGameUserNicknamePort).should()
+                .existsByGameIdAndNickname(2L, "newPlayer");
         then(updateGameUserNicknamePort).should().updateNickname(1L, "newPlayer");
     }
 
@@ -79,6 +81,8 @@ class UpdateGameUserNicknameServiceTest {
                 .isInstanceOf(GameUserNicknameAlreadyInUseException.class)
                 .hasMessage("이미 해당 게임에서 사용 중인 닉네임입니다.");
 
+        then(existsGameUserNicknamePort).should()
+                .existsByGameIdAndNickname(2L, "duplicatedName");
         then(updateGameUserNicknamePort).shouldHaveNoInteractions();
     }
 
@@ -132,6 +136,7 @@ class UpdateGameUserNicknameServiceTest {
         );
 
         assertThat(result).isEqualTo(profile);
+        then(existsGameUserNicknamePort).shouldHaveNoInteractions();
         then(updateGameUserNicknamePort).shouldHaveNoInteractions();
     }
 }

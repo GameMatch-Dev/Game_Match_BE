@@ -102,14 +102,14 @@ class GameUserControllerIntegrationTest {
         );
         String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
 
-        // when & then: Mock 없이 Security → Controller → Service → Persistence를 통과한다.
+        // 앞뒤 공백을 제거한 닉네임이 실제 DB까지 저장되는지 전체 계층을 통과해 검증한다.
         mockMvc.perform(patch("/game-users/{gameUserId}", savedGameUser.getId())
                         .header("Authorization", "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "nickname": "newPlayer"
+                                  "nickname": "  newPlayer  "
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -257,14 +257,14 @@ class GameUserControllerIntegrationTest {
         );
         String accessToken = jwtTokenService.issueAccessToken(savedUser.getId()).value();
 
-        // 같은 값을 다시 보내도 요청은 성공하며, 리소스 상태는 기존 값으로 유지된다.
+        // 공백 제거 후 같은 값이면 요청은 성공하며, 리소스 상태는 기존 값으로 유지된다.
         mockMvc.perform(patch("/game-users/{gameUserId}", savedGameUser.getId())
                         .header("Authorization", "Bearer " + accessToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
-                                  "nickname": "playerA"
+                                  "nickname": "  playerA  "
                                 }
                                 """))
                 .andExpect(status().isOk())
@@ -374,7 +374,7 @@ class GameUserControllerIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON)
                         .content(requestBody))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value("GAME_USER_002"))
                 .andExpect(jsonPath("$.message")
