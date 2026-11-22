@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 public enum AuthErrorCode implements ErrorCode {
     AUTH_400(HttpStatus.BAD_REQUEST, "AUTH_400", "로그인 요청이 올바르지 않습니다."),
     AUTH_401(HttpStatus.UNAUTHORIZED, "AUTH_401", "인증 정보가 없거나 유효하지 않습니다."),
+    AUTH_403(HttpStatus.FORBIDDEN, "AUTH_403", "게임 프로필을 수정할 권한이 없습니다."),
     AUTH_PROVIDER_UNAVAILABLE(
             HttpStatus.SERVICE_UNAVAILABLE,
             "AUTH_PROVIDER_UNAVAILABLE",

@@ -14,6 +14,7 @@ import com.hd.gamematch.gameuser.application.port.out.LoadGameUserByUserAndGameP
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUserPort;
 import com.hd.gamematch.gameuser.application.port.out.LoadGameUsersPort;
 import com.hd.gamematch.gameuser.application.port.out.SaveGameUserPort;
+import com.hd.gamematch.gameuser.application.port.out.UpdateGameUserNicknamePort;
 import com.hd.gamematch.gameuser.domain.GameUser;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +34,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameUserPort, ExistsGameUserNicknamePort,
-        LoadGameUserPort, LoadGameUserByUserAndGamePort, LoadGameUsersPort {
+        LoadGameUserPort, LoadGameUserByUserAndGamePort, LoadGameUsersPort, UpdateGameUserNicknamePort {
 
     private static final String DUPLICATE_REGISTRATION_CONSTRAINT =
             "uk_game_user_user_id_game_id";
@@ -101,6 +102,26 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
                 gameId,
                 nickname
         );
+    }
+
+    @Override
+    public void updateNickname(Long gameUserId, String nickname) {
+        GameUserJpaEntity gameUser = gameUserJpaRepository.findById(gameUserId)
+                .orElseThrow();
+
+        try {
+            gameUser.updateNickname(nickname);
+
+            // dirty checking만 사용하면 예외가 Adapter 밖의 commit 시점에 발생할 수 있다.
+            // Adapter 내부에서 UPDATE와 제약 검사를 실행해 여기서 업무 예외로 변환한다.
+            gameUserJpaRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            // 닉네임 유니크 제약 위반만 업무 예외로 바꾸고 다른 DB 오류는 숨기지 않는다.
+            if (hasConstraintViolation(exception, DUPLICATE_NICKNAME_CONSTRAINT)) {
+                throw new GameUserNicknameAlreadyInUseException();
+            }
+            throw exception;
+        }
     }
 
     @Override

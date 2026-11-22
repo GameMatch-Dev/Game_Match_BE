@@ -55,4 +55,8 @@ public class GameUserJpaEntity {
     ) {
         return new GameUserJpaEntity(userId, gameId, nickname);
     }
+
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
 }
