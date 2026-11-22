@@ -14,7 +14,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -32,8 +32,8 @@ public class SecurityConfig {
     private final KakaoOAuth2LoginFailureHandler kakaoOAuth2LoginFailureHandler;
 
     @Bean
-    JwtAuthenticationFilter jwtAuthenticationFilter(JwtTokenService jwtTokenService) {
-        return new JwtAuthenticationFilter(jwtTokenService);
+    JwtDecoder jwtDecoder(JwtTokenService jwtTokenService) {
+        return jwtTokenService.jwtDecoder();
     }
 
     @Bean
@@ -58,7 +58,7 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            JwtAuthenticationFilter jwtAuthenticationFilter,
+            JwtDecoder jwtDecoder,
             CorsConfigurationSource corsConfigurationSource,
             ObjectProvider<ClientRegistrationRepository> clientRegistrationRepositoryProvider
     ) throws Exception {
@@ -81,7 +81,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/game-users/*").permitAll()
                         .anyRequest().authenticated()
                 )
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+                // Bearer 추출과 JWT 인증 정보 저장은 Spring Security 기본 필터가 처리한다.
+                .oauth2ResourceServer(resourceServer -> resourceServer
+                        .jwt(jwt -> jwt.decoder(jwtDecoder))
+                        .authenticationEntryPoint(restAuthenticationEntryPoint));
 
         // Kakao 환경 변수가 있는 실행 환경에서만 OAuth2 Client 필터를 구성한다.
         if (clientRegistrationRepositoryProvider.getIfAvailable() != null) {

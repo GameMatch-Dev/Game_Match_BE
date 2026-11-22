@@ -14,6 +14,10 @@ import org.springframework.security.oauth2.jwt.JwsHeader;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -56,7 +60,18 @@ public class JwtTokenService {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(secretKey())
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
-        decoder.setJwtValidator(JwtValidators.createDefaultWithIssuer(properties.issuer()));
+        // Controller가 내부 사용자 ID로 해석할 수 없는 subject는 인증 단계에서 거부한다.
+        OAuth2TokenValidator<Jwt> userIdValidator = jwt -> {
+            try {
+                Long.parseLong(jwt.getSubject());
+                return OAuth2TokenValidatorResult.success();
+            } catch (NumberFormatException exception) {
+                return OAuth2TokenValidatorResult.failure(
+                        new OAuth2Error("invalid_token", "JWT subject must be an internal user ID", null));
+            }
+        };
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefaultWithIssuer(properties.issuer()), userIdValidator));
         return decoder;
     }
 

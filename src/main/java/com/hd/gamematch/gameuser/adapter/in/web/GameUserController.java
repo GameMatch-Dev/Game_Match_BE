@@ -74,8 +74,8 @@ public class GameUserController {
         Long gameId = request.gameId();
         String nickname = request.nickname();
 
-        // JWT Filter가 검증한 토큰의 sub를 현재 내부 사용자 ID로 넣어 둔다.
-        Long userId = (Long) authentication.getPrincipal();
+        // Spring JWT 인증의 name에서 내부 사용자 ID를 읽는다.
+        Long userId = Long.valueOf(authentication.getName());
 
 
         // 등록 전에 게임 상세 정보를 조회한다.
@@ -108,7 +108,7 @@ public class GameUserController {
             @PathVariable Long gameId,
             Authentication authentication
     ) {
-        Long userId = (Long) authentication.getPrincipal();
+        Long userId = Long.valueOf(authentication.getName());
 
         GameUserProfile gameUserProfile = findGameUserByUserAndGameUseCase.findGameUser(
                 FindGameUserByUserAndGameQuery.of(userId, gameId)
@@ -125,7 +125,7 @@ public class GameUserController {
             @Valid @RequestBody UpdateGameUserNicknameRequest request,
             Authentication authentication
     ) {
-        Long userId = (Long) authentication.getPrincipal();
+        Long userId = Long.valueOf(authentication.getName());
 
         GameUserProfile gameUserProfile = updateGameUserNicknameUseCase.updateNickname(
                 UpdateGameUserNicknameCommand.of(userId, gameUserId, request.nickname())

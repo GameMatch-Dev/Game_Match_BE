@@ -52,8 +52,8 @@ public class AuthController {
 
     @GetMapping("/me")
     public CommonResponse<CurrentUserResponse> me(Authentication authentication) {
-        // JwtAuthenticationFilter가 JWT의 sub(내부 userId)를 principal에 넣어 준다.
-        Long userId = (Long) authentication.getPrincipal();
+        // Spring JWT 인증의 name은 sub(내부 userId)를 반환한다.
+        Long userId = Long.valueOf(authentication.getName());
         return CommonResponse.success(new CurrentUserResponse(userId));
     }
 
