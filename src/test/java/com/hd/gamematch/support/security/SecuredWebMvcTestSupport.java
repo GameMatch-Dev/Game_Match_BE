@@ -1,8 +1,6 @@
 package com.hd.gamematch.support.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.hd.gamematch.auth.security.JwtAuthenticationFilter;
-import com.hd.gamematch.auth.security.JwtTokenService;
 import com.hd.gamematch.auth.security.RestAuthenticationEntryPoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
@@ -14,7 +12,6 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.util.Objects;
@@ -30,9 +27,6 @@ import static org.mockito.BDDMockito.given;
 public abstract class SecuredWebMvcTestSupport {
 
     @MockitoBean
-    private JwtTokenService jwtTokenService;
-
-    @MockitoBean
     private JwtDecoder jwtDecoder;
 
     // 지정한 내부 사용자 ID를 JWT subject로 해석하도록 decoder mock을 설정하고 Authorization 헤더 값을 반환한다.
@@ -46,7 +40,6 @@ public abstract class SecuredWebMvcTestSupport {
                 .subject(String.valueOf(userId))
                 .build();
 
-        given(jwtTokenService.jwtDecoder()).willReturn(jwtDecoder);
         given(jwtDecoder.decode(tokenValue)).willReturn(jwt);
 
         return "Bearer " + tokenValue;
@@ -69,7 +62,7 @@ public abstract class SecuredWebMvcTestSupport {
         @Bean
         SecurityFilterChain securityFilterChain(
                 HttpSecurity http,
-                JwtTokenService jwtTokenService,
+                JwtDecoder jwtDecoder,
                 RestAuthenticationEntryPoint restAuthenticationEntryPoint
         ) throws Exception {
             http
@@ -80,10 +73,9 @@ public abstract class SecuredWebMvcTestSupport {
                             .requestMatchers(HttpMethod.GET, "/game-users/*").permitAll()
                             .anyRequest().authenticated()
                     )
-                    .addFilterBefore(
-                            new JwtAuthenticationFilter(jwtTokenService),
-                            UsernamePasswordAuthenticationFilter.class
-                    );
+                    .oauth2ResourceServer(resourceServer -> resourceServer
+                            .jwt(jwt -> jwt.decoder(jwtDecoder))
+                            .authenticationEntryPoint(restAuthenticationEntryPoint));
             return http.build();
         }
     }

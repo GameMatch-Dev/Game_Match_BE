@@ -31,8 +31,8 @@ public class FriendlyMatchController {
             @Valid @RequestBody CreateFriendlyMatchRequest request,
             Authentication authentication
     ) {
-        // JWT Filter가 검증한 토큰의 sub를 현재 내부 사용자 ID로 넣어 둔다.
-        Long userId = (Long) authentication.getPrincipal();
+        // Spring JWT 인증의 name에서 내부 사용자 ID를 읽는다.
+        Long userId = Long.valueOf(authentication.getName());
 
         // HTTP 요청을 UseCase 입력값으로 변환하는 책임은 Request DTO에 둔다.
         FriendlyMatch friendlyMatch = createFriendlyMatchUseCase.create(request.toCommand(userId));

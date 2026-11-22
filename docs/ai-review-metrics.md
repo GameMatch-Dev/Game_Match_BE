@@ -24,3 +24,17 @@ Use comparable tasks or known-defect cases. Hold the requirement, Git baseline, 
 - elapsed time, number of calls, and rework rounds.
 
 Review routing is a hypothesis, not a conclusion: use Claude only where the measured added defect detection justifies its latency and usage.
+
+## 2026-11-23 JWT Resource Server migration
+
+Scope: user-approved replacement of custom JWT filter with Spring Resource Server; excludes hostGameUserId validation and usage-policy edits. Human explicitly approved this review batch below the local usage threshold.
+
+| Stage | Evidence / result | Usage | Duration |
+| --- | --- | --- | --- |
+| Codex independent review | No actionable implementation defect | Weekly remaining before 44%, after batch 42%; token usage UNAVAILABLE | UNAVAILABLE |
+| Separate test engineer | XML 160 tests, 0 failures/errors/skips; ACCEPT P2 missing expiry and issuer HTTP cases | Same Codex quota; token usage UNAVAILABLE | UNAVAILABLE |
+| Remediation and independent recheck | Added two tests; targeted JWT suite 9 pass, exit 0; no new findings | Same approved scope | Gradle 20s |
+| Claude direct attempt 1 | Incomplete output without findings JSON; not a completed review | Reported input 2, cache creation 16,599, cache read 3,293, output 3,265; total cost $0.1096226 | CLI 37.075s |
+| Claude direct retry | findings: []; no standalone actionable finding | Reported input 2, cache creation 14,334, cache read 5,652, output 9,939; total cost $0.1678384 | CLI 100.943s |
+
+Product regression evidence: `.\gradlew.bat test`, exit 0, 37s, 160 tests pass before the two test-only additions. Latest targeted execution: JWT suite 9 pass. Do not report a newly executed 162-test full suite. Claude reviewed the unchanged product diff and pre-addition test evidence; the final two tests were reviewed independently by Codex. Provider weekly Claude quota UNAVAILABLE. Both Claude calls used the fixed read-only helper with no tools and no persisted session. Raw outputs are in the task-local `jwt-review` folder; CLI total cost includes auxiliary model usage.
