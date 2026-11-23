@@ -5,7 +5,7 @@ import tools.jackson.core.JsonToken;
 import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.ValueDeserializer;
 
-// 생성 요청의 정수 필드에만 소수 입력 거부를 적용한다.
+// 애너테이션을 붙인 정수 필드에만 소수 입력 거부를 적용한다.
 public final class FriendlyMatchIntegerDeserializers {
     private FriendlyMatchIntegerDeserializers() {}
 
