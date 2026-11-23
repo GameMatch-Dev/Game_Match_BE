@@ -2,6 +2,7 @@ package com.hd.gamematch.friendlymatch.adapter.in.web;
 
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchCommand;
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchUseCase;
+import com.hd.gamematch.friendlymatch.application.port.in.request.CreateMatchRequestUseCase;
 import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchAccessDeniedException;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
@@ -46,6 +47,9 @@ class FriendlyMatchControllerWebMvcTest extends SecuredWebMvcTestSupport {
 
     @MockitoBean
     private CreateFriendlyMatchUseCase createFriendlyMatchUseCase;
+
+    @MockitoBean
+    private CreateMatchRequestUseCase createMatchRequestUseCase;
 
     @Test
     void 인증된_사용자가_자신의_게임_프로필로_친선_경기_모집을_생성하면_201_응답을_반환한다() throws Exception {
