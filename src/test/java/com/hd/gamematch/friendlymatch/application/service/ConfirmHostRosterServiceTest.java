@@ -9,8 +9,12 @@ import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
 import com.hd.gamematch.game.domain.Game;
+import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
+import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserUseCase;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -25,6 +29,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class ConfirmHostRosterServiceTest {
@@ -39,6 +45,8 @@ class ConfirmHostRosterServiceTest {
     private LoadFriendlyMatchPort loadFriendlyMatchPort;
     @Mock
     private SaveHostRosterPort saveHostRosterPort;
+    @Mock
+    private FindGameUserUseCase findGameUserUseCase;
     @InjectMocks
     private ConfirmHostRosterService service;
 
@@ -50,6 +58,8 @@ class ConfirmHostRosterServiceTest {
         FriendlyMatch saved = match();
         given(loadFriendlyMatchPort.loadFriendlyMatch(MATCH_ID)).willReturn(Optional.of(loaded));
         given(saveHostRosterPort.saveHostRoster(MATCH_ID, TEAM_MEMBER_IDS)).willReturn(saved);
+        lenient().when(findGameUserUseCase.findGameUsers(TEAM_MEMBER_IDS))
+                .thenReturn(rosterProfiles(TEAM_MEMBER_IDS));
 
         // when: 요청에 명시한 실제 참가자 두 명으로 명단을 확정한다.
         FriendlyMatch result = service.confirm(
@@ -86,12 +96,100 @@ class ConfirmHostRosterServiceTest {
                 ConfirmHostRosterCommand.of(4L, MATCH_ID, TEAM_MEMBER_IDS)))
                 .isInstanceOf(HostRosterAccessDeniedException.class);
         then(saveHostRosterPort).shouldHaveNoInteractions();
+        verifyNoInteractions(findGameUserUseCase);
+    }
+
+    // 같은 참가자 프로필을 두 번 지정하면 저장을 막는다.
+    @Test
+    void 중복된_명단이면_저장하지_않는다() {
+        given(loadFriendlyMatchPort.loadFriendlyMatch(MATCH_ID)).willReturn(Optional.of(match()));
+
+        assertThatThrownBy(() -> service.confirm(
+                ConfirmHostRosterCommand.of(USER_ID, MATCH_ID, List.of(20L, 20L))))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(saveHostRosterPort);
+    }
+
+    // 참가자 조회의 미존재 예외를 그대로 전달하고 저장을 막는다.
+    @Test
+    void 명단의_게임_프로필이_없으면_저장하지_않는다() {
+        List<Long> ids = List.of(20L, 99L);
+        given(loadFriendlyMatchPort.loadFriendlyMatch(MATCH_ID)).willReturn(Optional.of(match()));
+        lenient().when(findGameUserUseCase.findGameUsers(ids)).thenThrow(new GameUserNotFoundException());
+
+        assertThatThrownBy(() -> service.confirm(ConfirmHostRosterCommand.of(USER_ID, MATCH_ID, ids)))
+                .isInstanceOf(GameUserNotFoundException.class);
+        verifyNoInteractions(saveHostRosterPort);
+    }
+
+    // 다른 게임의 프로필이 명단에 섞이면 저장을 막는다.
+    @Test
+    void 명단에_다른_게임_프로필이_있으면_저장하지_않는다() {
+        given(loadFriendlyMatchPort.loadFriendlyMatch(MATCH_ID)).willReturn(Optional.of(match()));
+        Game otherGame = Game.of(2L, "Other Game", "FPS", null);
+        lenient().when(findGameUserUseCase.findGameUsers(TEAM_MEMBER_IDS))
+                .thenReturn(List.of(new GameUserProfile(20L, "member20", GAME, 4L),
+                        new GameUserProfile(21L, "member21", otherGame, 5L)));
+
+        assertThatThrownBy(() -> service.confirm(
+                ConfirmHostRosterCommand.of(USER_ID, MATCH_ID, TEAM_MEMBER_IDS)))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(saveHostRosterPort);
+    }
+
+    // 두 모집 방식에서 최대 인원을 넘는 실제 참가자 명단을 거절한다.
+    @ParameterizedTest
+    @EnumSource(FriendlyMatchSort.class)
+    void 명단이_최대_인원을_초과하면_저장하지_않는다(FriendlyMatchSort sort) {
+        List<Long> ids = List.of(20L, 21L, 22L, 23L, 24L, 25L);
+        given(loadFriendlyMatchPort.loadFriendlyMatch(MATCH_ID)).willReturn(Optional.of(match(sort)));
+        lenient().when(findGameUserUseCase.findGameUsers(ids)).thenReturn(rosterProfiles(ids));
+
+        assertThatThrownBy(() -> service.confirm(ConfirmHostRosterCommand.of(USER_ID, MATCH_ID, ids)))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(saveHostRosterPort);
+    }
+
+    // 명단에 주최자가 없어도 실제 참가자가 최대 인원과 같으면 저장한다.
+    @ParameterizedTest
+    @EnumSource(FriendlyMatchSort.class)
+    void 명단이_최대_인원과_같으면_저장한다(FriendlyMatchSort sort) {
+        List<Long> ids = List.of(20L, 21L, 22L, 23L, 24L);
+        FriendlyMatch saved = match(sort);
+        given(loadFriendlyMatchPort.loadFriendlyMatch(MATCH_ID)).willReturn(Optional.of(saved));
+        lenient().when(findGameUserUseCase.findGameUsers(ids)).thenReturn(rosterProfiles(ids));
+        given(saveHostRosterPort.saveHostRoster(MATCH_ID, ids)).willReturn(saved);
+
+        assertThat(service.confirm(ConfirmHostRosterCommand.of(USER_ID, MATCH_ID, ids))).isSameAs(saved);
+        then(saveHostRosterPort).should().saveHostRoster(MATCH_ID, ids);
+    }
+
+    // 빈 명단도 두 모집 방식에서 확정하여 저장할 수 있다.
+    @ParameterizedTest
+    @EnumSource(FriendlyMatchSort.class)
+    void 빈_명단도_확정하여_저장한다(FriendlyMatchSort sort) {
+        List<Long> ids = List.of();
+        FriendlyMatch saved = match(sort);
+        given(loadFriendlyMatchPort.loadFriendlyMatch(MATCH_ID)).willReturn(Optional.of(saved));
+        given(saveHostRosterPort.saveHostRoster(MATCH_ID, ids)).willReturn(saved);
+
+        assertThat(service.confirm(ConfirmHostRosterCommand.of(USER_ID, MATCH_ID, ids))).isSameAs(saved);
+        then(saveHostRosterPort).should().saveHostRoster(MATCH_ID, ids);
+    }
+
+    // 명단의 각 식별자에 대응하는 같은 게임 프로필을 준비한다.
+    private List<GameUserProfile> rosterProfiles(List<Long> ids) {
+        return ids.stream().map(id -> new GameUserProfile(id, "member" + id, GAME, id)).toList();
     }
 
     // 실제 참가자 명단과 별개로 팀별 최대 인원이 5인 TEAM 경기를 만든다.
     private FriendlyMatch match() {
+        return match(FriendlyMatchSort.TEAM);
+    }
+
+    private FriendlyMatch match(FriendlyMatchSort sort) {
         return new FriendlyMatch(
                 MATCH_ID, HOST, GAME, LocalDate.of(2026, 12, 1), LocalTime.of(19, 0),
-                FriendlyMatchSort.TEAM, FriendlyMatchState.RECRUITING, 5, "친선 경기");
+                sort, FriendlyMatchState.RECRUITING, 5, "친선 경기");
     }
 }
