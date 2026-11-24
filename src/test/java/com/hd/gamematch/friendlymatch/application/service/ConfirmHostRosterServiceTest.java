@@ -51,7 +51,7 @@ class ConfirmHostRosterServiceTest {
         given(loadFriendlyMatchPort.loadFriendlyMatch(MATCH_ID)).willReturn(Optional.of(loaded));
         given(saveHostRosterPort.saveHostRoster(MATCH_ID, TEAM_MEMBER_IDS)).willReturn(saved);
 
-        // when: 대표 프로필을 제외한 팀원 두 명으로 명단을 확정한다.
+        // when: 요청에 명시한 실제 참가자 두 명으로 명단을 확정한다.
         FriendlyMatch result = service.confirm(
                 ConfirmHostRosterCommand.of(USER_ID, MATCH_ID, TEAM_MEMBER_IDS));
 
@@ -88,7 +88,7 @@ class ConfirmHostRosterServiceTest {
         then(saveHostRosterPort).shouldHaveNoInteractions();
     }
 
-    // 대표자를 포함한 팀별 최대 인원이 5인 TEAM 경기를 만든다.
+    // 실제 참가자 명단과 별개로 팀별 최대 인원이 5인 TEAM 경기를 만든다.
     private FriendlyMatch match() {
         return new FriendlyMatch(
                 MATCH_ID, HOST, GAME, LocalDate.of(2026, 12, 1), LocalTime.of(19, 0),
