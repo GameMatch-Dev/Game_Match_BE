@@ -57,9 +57,14 @@ public class CreateMatchRequestService implements CreateMatchRequestUseCase {
                 .map(FindGameUserQuery::of)
                 .toList();
         validateUniqueProfiles(command.gameUserId(), teamMemberQueries);
-        for (FindGameUserQuery query : teamMemberQueries) {
+        if (!teamMemberQueries.isEmpty()) {
+            List<Long> validatedIds = teamMemberQueries.stream()
+                    .map(FindGameUserQuery::gameUserId)
+                    .toList();
             // 대표자는 다른 사용자의 프로필도 팀원으로 포함할 수 있다.
-            validateGame(findGameUserUseCase.findGameUser(query), target.gameId());
+            for (GameUserProfile teamMember : findGameUserUseCase.findGameUsers(validatedIds)) {
+                validateGame(teamMember, target.gameId());
+            }
         }
 
         MatchRequest existing = loadMatchRequestPort.loadByMatchIdAndGameUserId(
