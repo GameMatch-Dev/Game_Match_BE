@@ -1,5 +1,6 @@
 package com.hd.gamematch.friendlymatch.adapter.in.web;
 
+import com.jayway.jsonpath.JsonPath;
 import com.hd.gamematch.auth.adapter.out.persistence.UserJpaEntity;
 import com.hd.gamematch.auth.adapter.out.persistence.UserJpaRepository;
 import com.hd.gamematch.auth.security.JwtTokenService;
@@ -14,14 +15,18 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -53,6 +58,78 @@ class FriendlyMatchControllerIntegrationTest {
 
     @Autowired
     private EntityManager entityManager;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    // 실제 POST에서 명단의 생략, null, 빈 목록, 순서와 호스트 포함 여부를 그대로 저장한다.
+    @ParameterizedTest
+    @ValueSource(strings = {"absent", "null", "empty", "members", "host"})
+    void 생성_요청의_호스트_명단을_실제_DB에_저장한다(String rosterCase) throws Exception {
+        UserJpaEntity hostUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity memberUserA = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity memberUserB = userJpaRepository.save(UserJpaEntity.create());
+        GameJpaEntity game = gameJpaRepository.save(
+                GameJpaEntity.of("Roster POST", "MOBA", "https://example.com/roster"));
+        GameUserJpaEntity host = gameUserJpaRepository.save(
+                GameUserJpaEntity.of(hostUser.getId(), game.getId(), "roster-host"));
+        GameUserJpaEntity memberA = gameUserJpaRepository.save(
+                GameUserJpaEntity.of(memberUserA.getId(), game.getId(), "roster-member-a"));
+        GameUserJpaEntity memberB = gameUserJpaRepository.saveAndFlush(
+                GameUserJpaEntity.of(memberUserB.getId(), game.getId(), "roster-member-b"));
+        List<Long> expectedMembers = switch (rosterCase) {
+            case "members" -> List.of(memberB.getId(), memberA.getId());
+            case "host" -> List.of(host.getId(), memberA.getId());
+            default -> List.of();
+        };
+        String rosterField = switch (rosterCase) {
+            case "absent" -> "";
+            case "null" -> ", \"hostTeamMemberIds\": null";
+            default -> ", \"hostTeamMemberIds\": " + expectedMembers;
+        };
+        String token = jwtTokenService.issueAccessToken(hostUser.getId()).value();
+
+        // 인증부터 저장까지 실제 구성 요소를 통과시키고 공통 응답과 정원을 확인한다.
+        MvcResult response = mockMvc.perform(post("/friendly-matches")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": %d,
+                                  "gameId": %d,
+                                  "date": "%s",
+                                  "time": "20:00:00",
+                                  "sort": 0,
+                                  "capacity": 5,
+                                  "comment": "호스트 명단 POST 검증"%s
+                                }
+                                """.formatted(host.getId(), game.getId(), LocalDate.now().plusDays(1), rosterField)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.code").value("SUCCESS"))
+                .andExpect(jsonPath("$.data.id").isNumber())
+                .andExpect(jsonPath("$.data.host.id").value(host.getId()))
+                .andExpect(jsonPath("$.data.game.id").value(game.getId()))
+                .andExpect(jsonPath("$.data.capacity").value(5))
+                .andReturn();
+        Long matchId = JsonPath.parse(response.getResponse().getContentAsString()).read("$.data.id", Long.class);
+
+        // 영속성 문맥을 비운 뒤 응답 ID로 실제 행과 명단 순서를 직접 조회한다.
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(jdbcTemplate.queryForObject("select host_roster_confirmed from friendly_match where id = ?",
+                Boolean.class, matchId)).isEqualTo(!rosterCase.equals("absent") && !rosterCase.equals("null"));
+        assertThat(jdbcTemplate.queryForObject("select host_game_user_id from friendly_match where id = ?",
+                Long.class, matchId)).isEqualTo(host.getId());
+        assertThat(jdbcTemplate.queryForObject("select game_id from friendly_match where id = ?",
+                Long.class, matchId)).isEqualTo(game.getId());
+        assertThat(jdbcTemplate.queryForObject("select capacity from friendly_match where id = ?",
+                Integer.class, matchId)).isEqualTo(5);
+        assertThat(jdbcTemplate.queryForList(
+                "select game_user_id from friendly_match_host_member where match_id = ? order by member_order",
+                Long.class, matchId)).containsExactlyElementsOf(expectedMembers);
+    }
 
     // 팀전과 개인전 모두 요청 숫자가 DB enum과 응답 숫자로 올바르게 연결된다.
     @ParameterizedTest
