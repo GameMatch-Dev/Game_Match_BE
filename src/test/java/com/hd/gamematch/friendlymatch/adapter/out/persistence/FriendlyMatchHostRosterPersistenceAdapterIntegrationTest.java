@@ -78,7 +78,8 @@ class FriendlyMatchHostRosterPersistenceAdapterIntegrationTest {
     @Test
     void 저장된_경기의_호스트와_게임과_팀별_정원을_조회한다() {
         assertThat(host.userId()).isNotEqualTo(host.id());
-        assertThat(adapter.loadFriendlyMatch(expectedMatch.id())).contains(expectedMatch);
+        assertThat(adapter.loadFriendlyMatch(expectedMatch.id()))
+                .hasValueSatisfying(actual -> assertMatch(actual, expectedMatch));
         assertThat(storedConfirmed(expectedMatch.id())).isFalse();
     }
 
@@ -99,8 +100,9 @@ class FriendlyMatchHostRosterPersistenceAdapterIntegrationTest {
         assertThat(storedMemberIds(expectedMatch.id())).containsExactlyElementsOf(members)
                 .doesNotContain(host.id());
         assertThat(storedConfirmed(expectedMatch.id())).isTrue();
-        assertThat(savedMatch).isEqualTo(expectedMatch);
-        assertThat(adapter.loadFriendlyMatch(expectedMatch.id())).contains(expectedMatch);
+        assertMatch(savedMatch, expectedMatch);
+        assertThat(adapter.loadFriendlyMatch(expectedMatch.id()))
+                .hasValueSatisfying(actual -> assertMatch(actual, expectedMatch));
     }
 
     // 비어 있지 않은 새 명단으로 교체하면 이전 팀원 행을 남기지 않는다.
@@ -115,8 +117,9 @@ class FriendlyMatchHostRosterPersistenceAdapterIntegrationTest {
 
         assertThat(storedMemberIds(expectedMatch.id())).containsExactlyElementsOf(replacement);
         assertThat(storedConfirmed(expectedMatch.id())).isTrue();
-        assertThat(savedMatch).isEqualTo(expectedMatch);
-        assertThat(adapter.loadFriendlyMatch(expectedMatch.id())).contains(expectedMatch);
+        assertMatch(savedMatch, expectedMatch);
+        assertThat(adapter.loadFriendlyMatch(expectedMatch.id()))
+                .hasValueSatisfying(actual -> assertMatch(actual, expectedMatch));
     }
 
     // 대상 경기 명단을 교체해도 다른 경기의 팀원과 확정 표시를 유지한다.
@@ -135,7 +138,13 @@ class FriendlyMatchHostRosterPersistenceAdapterIntegrationTest {
         assertThat(storedConfirmed(expectedMatch.id())).isTrue();
         assertThat(storedMemberIds(anotherMatch.id())).containsExactlyElementsOf(otherMembers);
         assertThat(storedConfirmed(anotherMatch.id())).isTrue();
-        assertThat(adapter.loadFriendlyMatch(anotherMatch.id())).contains(anotherMatch);
+        assertThat(adapter.loadFriendlyMatch(anotherMatch.id()))
+                .hasValueSatisfying(actual -> assertMatch(actual, anotherMatch));
+    }
+
+    // DB에서 복원한 경기와 호스트 및 게임의 모든 필드 값을 재귀적으로 비교한다.
+    private void assertMatch(FriendlyMatch actual, FriendlyMatch expected) {
+        assertThat(actual).usingRecursiveComparison().isEqualTo(expected);
     }
 
     // 실제 사용자와 연결한 게임 프로필을 저장하고 도메인 값으로 반환한다.
