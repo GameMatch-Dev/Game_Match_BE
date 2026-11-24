@@ -24,6 +24,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @DataJpaTest
 @Import(FriendlyMatchPersistenceAdapter.class)
@@ -140,6 +141,46 @@ class FriendlyMatchHostRosterPersistenceAdapterIntegrationTest {
         assertThat(storedConfirmed(anotherMatch.id())).isTrue();
         assertThat(adapter.loadFriendlyMatch(anotherMatch.id()))
                 .hasValueSatisfying(actual -> assertMatch(actual, anotherMatch));
+    }
+
+    // 프로필과 게임 및 경기는 남아 있어도 호스트 사용자가 없으면 경기 복원을 거부한다.
+    @Test
+    void 호스트의_연결_사용자가_없으면_경기_조회를_거부한다() {
+        deleteHostUser();
+
+        assertThatThrownBy(() -> adapter.loadFriendlyMatch(expectedMatch.id()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("게임 프로필의 연결 사용자가 존재하지 않습니다.");
+    }
+
+    // 호스트 사용자 확인은 관리 중인 명단과 확정 표시를 변경하기 전에 끝나야 한다.
+    @Test
+    void 호스트의_연결_사용자가_없으면_명단을_변경하기_전에_저장을_거부한다() {
+        deleteHostUser();
+        FriendlyMatchJpaEntity managedEntity = matchRepository.findById(expectedMatch.id()).orElseThrow();
+        assertThat(managedEntity.getHostTeamMemberIds()).isEmpty();
+        assertThat(managedEntity.isHostRosterConfirmed()).isFalse();
+
+        assertThatThrownBy(() -> adapter.saveHostRoster(expectedMatch.id(), List.of(firstMemberId)))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("게임 프로필의 연결 사용자가 존재하지 않습니다.");
+
+        assertThat(managedEntity.getHostTeamMemberIds()).isEmpty();
+        assertThat(managedEntity.isHostRosterConfirmed()).isFalse();
+        flushAndClear();
+        assertThat(storedMemberIds(expectedMatch.id())).isEmpty();
+        assertThat(storedConfirmed(expectedMatch.id())).isFalse();
+    }
+
+    // 사용자 행만 삭제해 실제 프로필과 게임 및 경기를 보존한 고아 연결을 만든다.
+    private void deleteHostUser() {
+        assertThat(jdbcTemplate.update("delete from users where id = ?", host.userId())).isEqualTo(1);
+        flushAndClear();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from users where id = ?", Long.class, host.userId())).isZero();
+        assertThat(profileRepository.existsById(host.id())).isTrue();
+        assertThat(gameRepository.existsById(game.id())).isTrue();
+        assertThat(matchRepository.existsById(expectedMatch.id())).isTrue();
     }
 
     // DB에서 복원한 경기와 호스트 및 게임의 모든 필드 값을 재귀적으로 비교한다.
