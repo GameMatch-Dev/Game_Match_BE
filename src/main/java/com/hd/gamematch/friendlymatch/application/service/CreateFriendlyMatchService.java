@@ -3,6 +3,7 @@ package com.hd.gamematch.friendlymatch.application.service;
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchCommand;
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchUseCase;
 import com.hd.gamematch.friendlymatch.application.port.out.SaveFriendlyMatchPort;
+import com.hd.gamematch.friendlymatch.application.port.out.SaveHostRosterPort;
 import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchAccessDeniedException;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
@@ -22,6 +23,7 @@ public class CreateFriendlyMatchService implements CreateFriendlyMatchUseCase {
 
     private final FindGameUserUseCase findGameUserUseCase;
     private final SaveFriendlyMatchPort saveFriendlyMatchPort;
+    private final SaveHostRosterPort saveHostRosterPort;
     private final Clock clock;
 
     // 호스트 게임 프로필을 기준으로 친선 경기 모집을 만들고 저장한다.
@@ -61,6 +63,14 @@ public class CreateFriendlyMatchService implements CreateFriendlyMatchUseCase {
         );
 
         // 저장 Adapter가 ID를 채운 생성 완료 매치를 반환한다.
-        return saveFriendlyMatchPort.save(friendlyMatch);
+        FriendlyMatch savedFriendlyMatch = saveFriendlyMatchPort.save(friendlyMatch);
+
+        // 명단이 전달되면 빈 명단도 확정된 참가자 명단으로 그대로 저장한다.
+        if (command.hostTeamMemberIds() != null) {
+            return saveHostRosterPort.saveHostRoster(savedFriendlyMatch.id(), command.hostTeamMemberIds());
+        }
+
+        // 생략되거나 null인 명단은 미확정 상태로 두고 생성 결과를 반환한다.
+        return savedFriendlyMatch;
     }
 }
