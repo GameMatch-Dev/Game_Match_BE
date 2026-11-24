@@ -249,6 +249,83 @@ class GameUserPersistenceAdapterIntegrationTest {
     }
 
     @Test
+    void ID_목록의_프로필과_연결_정보를_세번_이하의_쿼리로_조회한다() {
+        GameJpaEntity firstGame = gameJpaRepository.save(
+                GameJpaEntity.of("League of Legends", "MOBA", "https://example.com/lol"));
+        GameJpaEntity secondGame = gameJpaRepository.save(
+                GameJpaEntity.of("Valorant", "FPS", "https://example.com/valorant"));
+        GameJpaEntity thirdGame = gameJpaRepository.save(
+                GameJpaEntity.of("Overwatch", "FPS", "https://example.com/overwatch"));
+        UserJpaEntity firstUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity secondUser = userJpaRepository.save(UserJpaEntity.create());
+        UserJpaEntity thirdUser = userJpaRepository.save(UserJpaEntity.create());
+        GameUserJpaEntity first = gameUserJpaRepository.save(
+                GameUserJpaEntity.of(firstUser.getId(), firstGame.getId(), "playerA"));
+        GameUserJpaEntity second = gameUserJpaRepository.save(
+                GameUserJpaEntity.of(secondUser.getId(), secondGame.getId(), "playerB"));
+        GameUserJpaEntity third = gameUserJpaRepository.save(
+                GameUserJpaEntity.of(thirdUser.getId(), thirdGame.getId(), "playerC"));
+        entityManager.flush();
+        entityManager.clear();
+
+        Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        boolean statisticsEnabled = statistics.isStatisticsEnabled();
+        try {
+            statistics.setStatisticsEnabled(true);
+            statistics.clear();
+
+            List<GameUserProfile> profiles = gameUserPersistenceAdapter.loadGameUsersByIds(
+                    List.of(third.getId(), first.getId(), second.getId()));
+
+            assertThat(profiles).hasSize(3);
+            assertThat(profiles).extracting(GameUserProfile::id)
+                    .containsExactlyInAnyOrder(first.getId(), second.getId(), third.getId());
+            assertThat(profiles).filteredOn(profile -> profile.id().equals(first.getId()))
+                    .singleElement().satisfies(profile -> {
+                        assertThat(profile.nickname()).isEqualTo("playerA");
+                        assertThat(profile.userId()).isEqualTo(firstUser.getId());
+                        assertThat(profile.game().id()).isEqualTo(firstGame.getId());
+                        assertThat(profile.game().name()).isEqualTo("League of Legends");
+                    });
+            assertThat(profiles).filteredOn(profile -> profile.id().equals(second.getId()))
+                    .singleElement().satisfies(profile -> {
+                        assertThat(profile.nickname()).isEqualTo("playerB");
+                        assertThat(profile.userId()).isEqualTo(secondUser.getId());
+                        assertThat(profile.game().id()).isEqualTo(secondGame.getId());
+                        assertThat(profile.game().name()).isEqualTo("Valorant");
+                    });
+            assertThat(profiles).filteredOn(profile -> profile.id().equals(third.getId()))
+                    .singleElement().satisfies(profile -> {
+                        assertThat(profile.nickname()).isEqualTo("playerC");
+                        assertThat(profile.userId()).isEqualTo(thirdUser.getId());
+                        assertThat(profile.game().id()).isEqualTo(thirdGame.getId());
+                        assertThat(profile.game().name()).isEqualTo("Overwatch");
+                    });
+            assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(3L);
+        } finally {
+            statistics.setStatisticsEnabled(statisticsEnabled);
+        }
+    }
+
+    @Test
+    void ID_목록이_비어있으면_쿼리_없이_빈_프로필_목록을_반환한다() {
+        entityManager.flush();
+        entityManager.clear();
+        Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        boolean statisticsEnabled = statistics.isStatisticsEnabled();
+        try {
+            statistics.setStatisticsEnabled(true);
+            statistics.clear();
+
+            assertThat(gameUserPersistenceAdapter.loadGameUsersByIds(List.of())).isEmpty();
+
+            assertThat(statistics.getPrepareStatementCount()).isZero();
+        } finally {
+            statistics.setStatisticsEnabled(statisticsEnabled);
+        }
+    }
+
+    @Test
     void 닉네임_접두사와_게임_조건으로_프로필_목록과_전체_개수를_조회한다() {
         // given
         GameJpaEntity leagueOfLegends = gameJpaRepository.save(

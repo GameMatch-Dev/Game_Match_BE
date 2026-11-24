@@ -4,6 +4,16 @@ This is an experiment log, not a scorecard. Record facts from tool output; leave
 
 ## Per-task record
 
+### 2026-11-24 참가 신청 API 종료 검증
+
+- 기준: main3425093, 참가 신청 초기 구현c9db48c. 실제 JWT HTTP 통합17개 통과.
+- Codex 독립 리뷰는 재신청 경합을 지적했다. H2 독립 트랜잭션 테스트에서 성공1건을 기대했지만2건 모두 성공하는 RED를 확인했다. 조건부 UPDATE/refresh 수정 뒤 HTTP17+경합1+Persistence17=35개 통과.
+- Claude 읽기 전용 직접 리뷰: 유효 structured_output4건. ACCEPT2(동시 재신청, 팀원별 조회 증가), REJECT2(응답 PENDING 추가, 이번 범위의 FK 차단 요구). 경합은 Codex와 중복된 동일 결함이므로 두 결함으로 합산하지 않는다.
+- Claude 비용$0.273115,139.607초,input2/cache creation30513/cache read0/output12773(thinking10833). Claude 주간 잔여 UNAVAILABLE. 호출 전 Codex 주간 잔여85%,5시간 잔여4%. 사용자가 이번 자료의 Anthropic 전송을 명시 승인했다. 리셋/크레딧 사용 없음.
+- 일괄 조회 테스트 선행 컴파일 RED8errors 후 대상62개 GREEN. 실제 SQL은 영속성 문맥 캐시의 영향을 받으므로 이전 저장소3N호출을 3N SQL이라고 단정하지 않는다. 냉각된 프로필3개 일괄 조회 최대3쿼리, 빈 입력0쿼리 회귀 테스트를 추가했다.
+- Claude 수정 후 재호출은 하지 않았다. 두 수정에 대한 독립 Codex 재검토 추가 findings 없음. 항목별 근거와 한계는 `docs/match-request-api-end-review.md` 참조.
+- 최종 전체 회귀:267개,실패0/오류0/생략0,exit0,Gradle39초(도구39.535초). 기존 생성 API 통합6개도 포함한다. MySQL 실행 검증을 뜻하지 않는다.
+
 | Date | Jira / scope | Baseline | Mode | Codex agents | Claude round | Test result | Confirmed defects found | False positives | Codex usage / cost | Claude usage / cost | Elapsed time | Decision / notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | 2026-08-31 | Workflow restored after rollback | `95d058c` | Baseline setup | navigator, analyst, contract | not invoked | not applicable | 0 | 0 | UNAVAILABLE | UNAVAILABLE | UNAVAILABLE | No product-code change; first comparable feature run pending. |
