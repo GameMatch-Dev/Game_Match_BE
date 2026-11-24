@@ -6,6 +6,8 @@ import java.util.List;
 
 public interface LoadGameUsersPort {
 
+    List<GameUserProfile> loadGameUsersByIds(List<Long> gameUserIds);
+
     List<GameUserProfile> loadGameUsersByNicknamePrefix(
             String nickname,
             Long gameId,
