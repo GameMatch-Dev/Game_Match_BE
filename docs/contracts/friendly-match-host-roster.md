@@ -101,3 +101,21 @@
   Claude 종료 리뷰는 API 구현과 통합 검증을 마친 뒤 수행한다.
 - 사용량 확인: 시작 Codex 주간 잔여 61%, 5시간 잔여 100%; 검증 후 각각 60%, 94%.
   Claude 주간 사용량은 `UNAVAILABLE`이며 초기화 크레딧은 사용하지 않았다.
+
+## Service 테스트 첫 묶음 RED (2026-11-24)
+
+- 사용자 지시에 따라 `ConfirmHostRosterServiceTest` 한 파일에 세 사례를 작성했다.
+  주최자 명단 저장과 저장 결과 반환, 경기 미존재 예외, 타인 요청 권한 예외를 검증한다.
+  실패 경로 두 개는 명단 저장 포트를 호출하지 않아야 한다.
+- 성공 사례는 비어 있지 않은 대표 제외 목록 `[20, 21]`을 사용한다.
+  빈 명단, 프로필 추가 검증, 인원 초과 오류나 승인 후 변경 정책은 고정하지 않는다.
+- 실행: `.\gradlew.bat test --tests '*ConfirmHostRosterServiceTest'`.
+  `compileTestJava`에서 `cannot find symbol` 오류 5개, 종료 코드 1.
+  누락 타입은 `LoadFriendlyMatchPort`, `SaveHostRosterPort`, `ConfirmHostRosterService`다.
+  예정 세 사례의 테스트 본문 실행은 0건이며, 동작 검증 실패와 구분한다.
+- 독립 검토에서 이번 테스트 범위의 수정 필요 결함은 발견되지 않았다.
+  제품 코드는 이번 묶음에서 변경하지 않았다. 이전 Controller 64건 통과는 이전 실행 이력이다.
+- 다음은 조회와 명단 저장 출력 Port, Service를 추가해 현재 RED를 해결하는 단계다.
+  실제 저장 어댑터와 통합 검증 및 API 종료 Claude 리뷰는 이후 진행한다.
+- 사용량: 시작 Codex 주간 잔여 60%, 5시간 잔여 93%; 완료 시 각각 59%, 88%.
+  Claude 주간 사용량은 `UNAVAILABLE`. 이번은 테스트 작성 승인 범위이며 제품 구현 예외를 확장하지 않았다.
