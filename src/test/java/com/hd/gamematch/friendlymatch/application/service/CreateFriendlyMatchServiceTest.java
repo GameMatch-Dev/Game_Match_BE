@@ -14,6 +14,7 @@ import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -28,6 +29,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -124,12 +126,12 @@ class CreateFriendlyMatchServiceTest {
     }
 
     // 선택한 호스트 명단은 매치 저장 후 발급된 ID로 저장하고 그 결과를 반환한다.
-    @Test
-    void 호스트_명단이_있으면_매치_저장_후_명단을_저장한_결과를_반환한다() {
+    @ParameterizedTest
+    @MethodSource("confirmedHostRosters")
+    void 호스트_명단이_있으면_매치_저장_후_명단을_저장한_결과를_반환한다(List<Long> hostTeamMemberIds) {
         // 인증 사용자 소유의 호스트와 미래 팀 경기 요청을 준비한다.
         Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
         GameUserProfile host = new GameUserProfile(10L, "hostA", game, 3L);
-        List<Long> hostTeamMemberIds = List.of(20L, 21L);
         CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
                 3L, 10L, 1L, LocalDate.of(2027, 6, 10), LocalTime.of(20, 0),
                 FriendlyMatchSort.TEAM, 5, "정상 소개", hostTeamMemberIds);
@@ -155,6 +157,11 @@ class CreateFriendlyMatchServiceTest {
 
         // 최종 반환값은 명단 저장 Port가 돌려준 인스턴스여야 한다.
         assertThat(result).isSameAs(rosterSavedFriendlyMatch);
+    }
+
+    // 실제 참가자 명단은 주최자를 포함하거나 참가자가 없는 확정 명단일 수 있다.
+    static Stream<List<Long>> confirmedHostRosters() {
+        return Stream.of(List.of(20L, 21L), List.of(10L, 20L), List.<Long>of());
     }
 
     // 호스트 명단을 생략한 기존 생성 호출은 매치 저장 결과를 그대로 반환한다.
