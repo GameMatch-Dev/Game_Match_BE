@@ -2,6 +2,7 @@ package com.hd.gamematch.friendlymatch.adapter.in.web.exception;
 
 import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchAccessDeniedException;
 import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchNotFoundException;
+import com.hd.gamematch.friendlymatch.application.exception.HostRosterAccessDeniedException;
 import com.hd.gamematch.friendlymatch.application.exception.MatchNotRecruitingException;
 import com.hd.gamematch.friendlymatch.application.exception.MatchRequestAccessDeniedException;
 import com.hd.gamematch.friendlymatch.application.exception.MatchRequestAlreadyActiveException;
@@ -30,6 +31,14 @@ public class FriendlyMatchExceptionHandler {
                         exception.getMessage(),
                         null
                 ));
+    }
+
+    // 호스트 명단 확정 권한 오류를 업무 메시지와 함께 403으로 변환한다.
+    @ExceptionHandler(HostRosterAccessDeniedException.class)
+    public ResponseEntity<CommonResponse<Void>> handleHostRosterAccessDenied(
+            HostRosterAccessDeniedException exception
+    ) {
+        return errorResponse(AuthErrorCode.AUTH_403, exception.getMessage());
     }
 
     // 존재하지 않는 친선 경기의 신청을 404 응답으로 변환한다.

@@ -43,6 +43,8 @@ public class SecurityConfig {
         configuration.setAllowedMethods(List.of(
                 HttpMethod.GET.name(),
                 HttpMethod.POST.name(),
+                // 호스트 로스터 PUT 요청의 CORS preflight를 허용한다.
+                HttpMethod.PUT.name(),
                 HttpMethod.PATCH.name(),
                 HttpMethod.OPTIONS.name()
         ));
