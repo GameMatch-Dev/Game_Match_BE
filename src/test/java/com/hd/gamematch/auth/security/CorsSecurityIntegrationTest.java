@@ -57,4 +57,16 @@ class CorsSecurityIntegrationTest {
                         containsString("PATCH")
                 ));
     }
+
+    // JWT 없이 보낸 호스트 명단 PUT 사전 요청에 허용 출처와 메서드를 반환한다.
+    @Test
+    void 설정한_프런트엔드_출처의_호스트_명단_PUT_사전_요청을_허용한다() throws Exception {
+        mockMvc.perform(options("/friendly-matches/1/host-roster")
+                        .header(HttpHeaders.ORIGIN, "http://localhost:3000")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_METHOD, "PUT")
+                        .header(HttpHeaders.ACCESS_CONTROL_REQUEST_HEADERS, "Authorization,Content-Type"))
+                .andExpect(status().isOk())
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_ORIGIN, "http://localhost:3000"))
+                .andExpect(header().string(HttpHeaders.ACCESS_CONTROL_ALLOW_METHODS, containsString("PUT")));
+    }
 }
