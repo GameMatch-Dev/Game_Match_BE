@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -61,6 +62,77 @@ class FriendlyMatchControllerIntegrationTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    // 실제 POST에서 명단 정책 오류를 공통 오류 응답으로 반환하고 경기와 명단 행을 남기지 않는다.
+    @ParameterizedTest
+    @CsvSource({"duplicate, 0, 400, COMMON_400", "missing, 0, 404, GAME_USER_001",
+            "wronggame, 0, 400, COMMON_400", "overflow, 0, 400, COMMON_400",
+            "overflow, 1, 400, COMMON_400"})
+    void 잘못된_명단의_생성_요청은_오류를_반환하고_DB를_유지한다(
+            String rosterCase, int sort, int expectedStatus, String expectedCode) throws Exception {
+        UserJpaEntity owner = userJpaRepository.save(UserJpaEntity.create());
+        GameJpaEntity game = gameJpaRepository.save(
+                GameJpaEntity.of("Roster error POST", "MOBA", "https://example.com/roster-error"));
+        GameUserJpaEntity host = gameUserJpaRepository.save(
+                GameUserJpaEntity.of(owner.getId(), game.getId(), "error-host"));
+        List<Long> validMembers = new ArrayList<>();
+        // 정원 초과 요청도 모두 같은 게임에 속한 서로 다른 실제 프로필로 구성한다.
+        for (int index = 0; index < 6; index++) {
+            UserJpaEntity member = userJpaRepository.save(UserJpaEntity.create());
+            validMembers.add(gameUserJpaRepository.save(
+                    GameUserJpaEntity.of(member.getId(), game.getId(), "error-member-" + index)).getId());
+        }
+        List<Long> requestedMembers;
+        if (rosterCase.equals("wronggame")) {
+            GameJpaEntity otherGame = gameJpaRepository.save(
+                    GameJpaEntity.of("Other game", "FPS", "https://example.com/other"));
+            UserJpaEntity otherOwner = userJpaRepository.save(UserJpaEntity.create());
+            GameUserJpaEntity otherProfile = gameUserJpaRepository.save(
+                    GameUserJpaEntity.of(otherOwner.getId(), otherGame.getId(), "other-game-member"));
+            requestedMembers = List.of(validMembers.get(0), otherProfile.getId());
+        } else {
+            requestedMembers = switch (rosterCase) {
+                case "duplicate" -> List.of(validMembers.get(0), validMembers.get(0));
+                case "missing" -> List.of(validMembers.get(0), Long.MAX_VALUE);
+                default -> validMembers;
+            };
+        }
+        entityManager.flush();
+        entityManager.clear();
+        long originalMatchCount = friendlyMatchJpaRepository.count();
+        Long originalRosterCount = jdbcTemplate.queryForObject(
+                "select count(*) from friendly_match_host_member", Long.class);
+        String token = jwtTokenService.issueAccessToken(owner.getId()).value();
+
+        // 실제 JWT와 요청의 경기 유형을 사용해 생성 경로 전체의 오류 응답을 확인한다.
+        mockMvc.perform(post("/friendly-matches")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "hostGameUserId": %d,
+                                  "gameId": %d,
+                                  "date": "%s",
+                                  "time": "20:00:00",
+                                  "sort": %d,
+                                  "capacity": 5,
+                                  "comment": "명단 오류 검증",
+                                  "hostTeamMemberIds": %s
+                                }
+                                """.formatted(host.getId(), game.getId(), LocalDate.now().plusDays(1),
+                                sort, requestedMembers)))
+                .andExpect(status().is(expectedStatus))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(expectedCode));
+
+        // 오류 처리 뒤 캐시를 비우고 경기와 명단의 실제 행 수가 그대로인지 확인한다.
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(friendlyMatchJpaRepository.count()).isEqualTo(originalMatchCount);
+        assertThat(jdbcTemplate.queryForObject("select count(*) from friendly_match_host_member", Long.class))
+                .isEqualTo(originalRosterCount);
+    }
 
     // 실제 POST에서 명단의 생략, null, 빈 목록, 순서와 호스트 포함 여부를 그대로 저장한다.
     @ParameterizedTest
