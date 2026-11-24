@@ -139,6 +139,15 @@ public class GameUserPersistenceAdapter implements SaveGameUserPort, ExistsGameU
                 .map(this::toGameUserProfile);
     }
 
+    // 프로필과 연결 데이터를 각각 일괄 조회한다.
+    @Override
+    public List<GameUserProfile> loadGameUsersByIds(List<Long> gameUserIds) {
+        if (gameUserIds.isEmpty()) {
+            return List.of();
+        }
+        return toGameUserProfiles(gameUserJpaRepository.findAllById(gameUserIds));
+    }
+
     @Override
     public List<GameUserProfile> loadGameUsersByNicknamePrefix(
             String nickname,
