@@ -36,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.lenient;
 
@@ -106,10 +107,9 @@ class CreateMatchRequestServiceTest {
         List<Long> teamMemberIds = List.of(20L, 21L);
         givenRequester();
         givenRecruitingTarget();
-        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(20L)))
-                .willReturn(new GameUserProfile(20L, "teammateA", GAME, 5L));
-        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(21L)))
-                .willReturn(new GameUserProfile(21L, "teammateB", GAME, 6L));
+        given(findGameUserUseCase.findGameUsers(teamMemberIds))
+                .willReturn(List.of(new GameUserProfile(20L, "teammateA", GAME, 5L),
+                        new GameUserProfile(21L, "teammateB", GAME, 6L)));
         givenNoExistingRequest();
         given(saveMatchRequestPort.save(any(MatchRequest.class))).willReturn(REQUEST_ID);
 
@@ -120,6 +120,9 @@ class CreateMatchRequestServiceTest {
         assertNewRequest(captureSavedRequest(), teamMemberIds);
         assertThat(result.requestId()).isEqualTo(REQUEST_ID);
         assertThat(result.created()).isTrue();
+        verify(findGameUserUseCase).findGameUsers(teamMemberIds);
+        verify(findGameUserUseCase, never()).findGameUser(FindGameUserQuery.of(20L));
+        verify(findGameUserUseCase, never()).findGameUser(FindGameUserQuery.of(21L));
     }
 
     // 인증 사용자와 신청 프로필 소유자가 다르면 저장하지 않는다.
@@ -195,8 +198,8 @@ class CreateMatchRequestServiceTest {
         // given
         givenRequester();
         givenRecruitingTarget();
-        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(20L)))
-                .willReturn(new GameUserProfile(20L, "teammate", OTHER_GAME, 5L));
+        given(findGameUserUseCase.findGameUsers(List.of(20L)))
+                .willReturn(List.of(new GameUserProfile(20L, "teammate", OTHER_GAME, 5L)));
 
         // when / then
         assertThatThrownBy(() -> service.createRequest(command(List.of(20L))))
@@ -211,7 +214,7 @@ class CreateMatchRequestServiceTest {
         givenRequester();
         givenRecruitingTarget();
         GameUserNotFoundException failure = new GameUserNotFoundException();
-        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(20L))).willThrow(failure);
+        given(findGameUserUseCase.findGameUsers(List.of(20L))).willThrow(failure);
 
         // when / then
         assertThatThrownBy(() -> service.createRequest(command(List.of(20L)))).isSameAs(failure);
@@ -260,10 +263,9 @@ class CreateMatchRequestServiceTest {
         List<Long> teamMemberIds = List.of(20L, 21L);
         givenRequester();
         givenRecruitingTarget();
-        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(20L)))
-                .willReturn(new GameUserProfile(20L, "teammateA", GAME, 5L));
-        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(21L)))
-                .willReturn(new GameUserProfile(21L, "teammateB", GAME, 6L));
+        given(findGameUserUseCase.findGameUsers(teamMemberIds))
+                .willReturn(List.of(new GameUserProfile(20L, "teammateA", GAME, 5L),
+                        new GameUserProfile(21L, "teammateB", GAME, 6L)));
         given(loadMatchRequestPort.loadByMatchIdAndGameUserId(MATCH_ID, GAME_USER_ID))
                 .willReturn(Optional.of(new MatchRequest(
                         REQUEST_ID, MATCH_ID, GAME_USER_ID, List.of(30L), "기존 메시지", state)));
