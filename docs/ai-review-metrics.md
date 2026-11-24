@@ -123,6 +123,23 @@ repository helper source was not changed. No Codex self-review reasoning or full
 The one accepted conditional consistency gap was initially found by Claude, then independently
 confirmed by Codex. Validation duplication was already a Codex maintenance observation, not a new
 standalone actionable Claude finding. No general model-quality advantage is inferred from one case.
-Accepted P3 is not remediated; no source-change re-review was run. Source/Jira and runtime limits,
+Accepted P3 was not remediated at this initial review; no Claude source-change re-review was run. Source/Jira and runtime limits,
 exact evidence and finding decisions are in [host roster end review](host-roster-api-end-review.md).
 Final account quota check: Codex weekly remaining 37%, 5h remaining 48%; Claude weekly UNAVAILABLE.
+
+## 2026-11-24 Host roster P3 remediation follow-up
+
+User explicitly approved the entire P3 remediation below the weekly threshold: RED reproduction,
+minimal Adapter fix, executed regression and independent Codex review. No extra Claude call was made.
+
+| Stage | Executed evidence | Usage / duration |
+| --- | --- | --- |
+| RED reproduction | 23 tests: 20 pass, 3 fail because no exception; failures 3/errors 0/skips 0, exit 1 | Gradle 24s; start Codex weekly remaining 36%, 5h 44% |
+| Minimal correction | UserJpaRepository exists check, canonical IllegalStateException, mapping before managed roster mutation | Product changes only FriendlyMatchPersistenceAdapter; no input UseCase dependency or new public error mapping |
+| GREEN and regression | Targeted 23/23, exit 0, 25s; full 347/347 across 35 suites, exit 0, 40s | Failures/errors/skips all 0; exact wrapper durations 26.0028s and 40.8841s |
+| Separate Codex review | No actionable remaining finding in the correction; conditional CR-1 resolved | End account weekly remaining 32%, 5h 17%; Codex token counts UNAVAILABLE |
+
+The original Claude discovery and $1.1113856 cost remain unchanged, not overwritten as a new Claude
+validation. No Claude post-fix review, new external transmission, reset, operational DB action or merge.
+Runtime evidence is H2; HTTP invariance tests use ambient test transactions and do not by themselves
+establish independent request commits. Existing nonambient creation rollback test remains in the full suite.
