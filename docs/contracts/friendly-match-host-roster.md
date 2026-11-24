@@ -83,3 +83,21 @@
 - 실제 대상 실행은 compileTestJava에서 타입 누락 오류5개, exit1로 중단됐다.
   Command/UseCase/권한 예외가 없으며 HTTP 테스트 본문은 실행되지 않았다.
 - 독립 테스트 검토: 구체적인 결함 없음. 제품 코드는 아직 변경하지 않았다.
+
+## Controller GREEN 검증 (2026-11-24)
+
+- 위 첫 실행의 컴파일 RED 이후 Request, Command, UseCase, 권한 예외와 HTTP 처리기를 추가했다.
+  사용자는 이번 Controller RED를 만족하는 파일 묶음의 AI 직접 작성을 승인했다.
+- `FriendlyMatchHostRosterControllerWebMvcTest` 실제 19건 통과.
+  기존 생성 Controller 26건, 참가 신청 Controller 19건을 함께 실행해 총 64건 통과했다.
+  실패, 오류, 건너뜀은 모두 0이며 Gradle 종료 코드는 0이다.
+- 새 입력 포트 주입에 맞춰 기존 두 WebMvc 테스트에도 해당 포트의 Mock을 추가했다.
+  독립 코드 검토에서 현재 HTTP 범위의 수정 필요 결함은 발견되지 않았다.
+- 테스트는 UseCase 응답을 Mock으로 지정한다. 실제 호스트 확인, 명단 검증과 저장을
+  구현하거나 검증한 결과가 아니다. 생성 Service도 아직 새 명단을 저장하지 않는다.
+- `ConfirmHostRosterUseCase`의 실제 구현이 없어 전체 앱 연결은 아직 미완성이다.
+  전체 앱 통합 테스트와 브라우저 PUT CORS 검증은 이번에 실행하지 않았다.
+- 다음 단계는 승인된 정책의 Service 테스트다. OPEN 정책은 사람의 결정 없이 고정하지 않는다.
+  Claude 종료 리뷰는 API 구현과 통합 검증을 마친 뒤 수행한다.
+- 사용량 확인: 시작 Codex 주간 잔여 61%, 5시간 잔여 100%; 검증 후 각각 60%, 94%.
+  Claude 주간 사용량은 `UNAVAILABLE`이며 초기화 크레딧은 사용하지 않았다.
