@@ -49,7 +49,7 @@
 
 ## 미결정 사항 (OPEN)
 
-- 추가 응답 필드와 명단 확정 상태의 내부 표현. Controller 테스트는 기존 경기 응답의
+- 추가 응답 필드. Controller 테스트는 기존 경기 응답의
   id/capacity와 공통 성공 형식을 기준으로 시작하며 새 공개 필드를 임의로 고정하지 않는다.
 - 상대 팀 참가 승인 후 호스트 명단 변경 허용 여부와 처리 방식.
 - 양 팀에 동일한 사람이 포함되는 경우의 허용 여부와 검증 방식.
@@ -101,6 +101,36 @@
   Claude 종료 리뷰는 API 구현과 통합 검증을 마친 뒤 수행한다.
 - 사용량 확인: 시작 Codex 주간 잔여 61%, 5시간 잔여 100%; 검증 후 각각 60%, 94%.
   Claude 주간 사용량은 `UNAVAILABLE`이며 초기화 크레딧은 사용하지 않았다.
+
+## Persistence 테스트 첫 묶음 RED (2026-11-24)
+
+- 별도 `FriendlyMatchHostRosterPersistenceAdapterIntegrationTest`에 다섯 사례를 작성했다.
+  경기 전체 복원과 미존재 조회, 비어 있지 않은 명단 저장/교체, 다른 경기의 명단 유지다.
+- 실제 사용자와 게임 및 프로필을 준비하며 호스트의 사용자 ID와 프로필 ID를 다르게 둔다.
+  `flush/clear` 후 JDBC로 팀원 행과 확정 여부를 확인하도록 작성했다.
+- 실행: `.\gradlew.bat test --tests '*FriendlyMatchHostRosterPersistenceAdapterIntegrationTest'`.
+  실제 결과는 `compileTestJava`의 `cannot find symbol` 11개, 종료 코드 1이다.
+  Adapter의 `loadFriendlyMatch` 미구현 참조 5개와 `saveHostRoster` 미구현 참조 6개다.
+- 테스트 메서드는 5개지만 본문 실행은 0개다. DB 동작이 검증된 결과가 아니며 이전
+  Service/Controller 67개 통과를 이번 실행 결과로 합산하지 않는다.
+- 독립 검토에서 수정 필요 결함은 발견되지 않았다. 이번은 AI 테스트 작성 승인 범위이며
+  제품 Adapter, Entity, 스키마와 마이그레이션은 아직 변경하지 않았다.
+- 다음은 필요한 내부 저장 구조와 Adapter를 구현해 현재 RED를 해결하는 단계다.
+  별도 업무 검증 정책, 실제 API 통합과 Claude 종료 리뷰는 이후 진행한다.
+- 사용량: Codex 주간 잔여 58%에서 56%, 5시간 잔여 82%에서 72%.
+  Claude 주간 사용량은 `UNAVAILABLE`이며 이번 단계의 Claude 호출은 없다. 초기화 미사용.
+
+## Persistence 테스트를 위한 내부 저장 선택 (2026-11-24)
+
+- 미확정과 확정을 구분하기 위해 `friendly_match.host_roster_confirmed`를 사용하고,
+  기본값은 false, 명단 저장 시 true로 기록하는 방식을 선택한다.
+- 대표자를 제외한 팀원은 `friendly_match_host_member`의 `match_id`, `game_user_id`,
+  `member_order`로 분리한다. 입력 순서를 보존하되 업무상 우선순위를 부여하지 않는다.
+- 이는 기존 승인 정책을 저장할 내부 기술 선택이며 사용자가 이 컬럼/테이블 설계를
+  직접 승인했다고 기록하지 않는다. 공개 도메인/응답 필드의 추가 계약은 고정하지 않는다.
+- 비어 있지 않은 명단의 저장과 교체, 경기별 데이터 분리를 먼저 검증한다.
+  빈 명단의 확정 의미, 추가 명단 검증과 승인 후 수정 및 동시 처리 정책은 여전히 OPEN이다.
+- 이번 단계는 테스트 작성이며 실제 스키마와 제품 Adapter 구현은 후속 GREEN 단계다.
 
 ## Service 테스트 첫 묶음 RED (2026-11-24)
 
