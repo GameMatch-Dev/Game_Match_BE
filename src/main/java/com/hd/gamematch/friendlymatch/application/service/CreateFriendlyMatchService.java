@@ -15,6 +15,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.List;
 
 @Service
 @Transactional
@@ -49,6 +51,11 @@ public class CreateFriendlyMatchService implements CreateFriendlyMatchUseCase {
             throw new IllegalArgumentException("경기 일시는 현재보다 미래여야 합니다.");
         }
 
+        // 명단을 제공한 경우 경기와 명단을 저장하기 전에 실제 참가자를 검증한다.
+        if (command.hostTeamMemberIds() != null) {
+            validateRoster(command.hostTeamMemberIds(), command.capacity(), host.game().id());
+        }
+
         // DB가 ID를 발급하기 전이므로 새 매치는 아직 식별자가 없다.
         FriendlyMatch friendlyMatch = new FriendlyMatch(
                 null,
@@ -72,5 +79,27 @@ public class CreateFriendlyMatchService implements CreateFriendlyMatchUseCase {
 
         // 생략되거나 null인 명단은 미확정 상태로 두고 생성 결과를 반환한다.
         return savedFriendlyMatch;
+    }
+
+    // 실제 참가자 수와 중복 및 경기 게임 일치를 확인한다.
+    private void validateRoster(List<Long> memberIds, int capacity, Long gameId) {
+        // TEAM은 팀별 한도, INDIVIDUAL은 경기 전체 한도이며 주최자를 자동 합산하지 않는다.
+        if (memberIds.size() > capacity) {
+            throw new IllegalArgumentException("참가자 명단이 최대 인원을 초과합니다.");
+        }
+        if (new HashSet<>(memberIds).size() != memberIds.size()) {
+            throw new IllegalArgumentException("참가자 명단에 중복된 게임 프로필이 있습니다.");
+        }
+
+        // 빈 명단은 조회 없이 허용하고 나머지는 한 번의 일괄 조회로 존재 여부를 확인한다.
+        if (memberIds.isEmpty()) {
+            return;
+        }
+        List<GameUserProfile> members = findGameUserUseCase.findGameUsers(memberIds);
+        for (GameUserProfile member : members) {
+            if (!member.game().id().equals(gameId)) {
+                throw new IllegalArgumentException("참가자 게임 프로필의 게임과 경기 게임이 일치하지 않습니다.");
+            }
+        }
     }
 }
