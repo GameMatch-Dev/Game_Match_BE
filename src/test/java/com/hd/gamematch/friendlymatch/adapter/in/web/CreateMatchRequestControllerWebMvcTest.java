@@ -8,6 +8,7 @@ import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyM
 import com.hd.gamematch.friendlymatch.application.port.in.request.CreateMatchRequestCommand;
 import com.hd.gamematch.friendlymatch.application.port.in.request.CreateMatchRequestResult;
 import com.hd.gamematch.friendlymatch.application.port.in.request.CreateMatchRequestUseCase;
+import com.hd.gamematch.friendlymatch.application.port.in.hostroster.ConfirmHostRosterUseCase;
 import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
 import com.hd.gamematch.global.exception.GlobalExceptionHandler;
 import com.hd.gamematch.support.security.SecuredWebMvcTestSupport;
@@ -59,6 +60,9 @@ class CreateMatchRequestControllerWebMvcTest extends SecuredWebMvcTestSupport {
 
     @MockitoBean
     private CreateMatchRequestUseCase createMatchRequestUseCase;
+
+    @MockitoBean
+    private ConfirmHostRosterUseCase confirmHostRosterUseCase;
 
     // 대표 신청자의 JWT와 팀원 프로필 목록을 전달하고 신규 신청 ID를 응답한다.
     @Test
