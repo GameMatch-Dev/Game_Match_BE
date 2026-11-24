@@ -15,6 +15,7 @@ import com.hd.gamematch.gameuser.adapter.out.persistence.GameUserJpaEntity;
 import com.hd.gamematch.gameuser.adapter.out.persistence.GameUserJpaRepository;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
 import jakarta.persistence.EntityManager;
+import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -201,6 +203,25 @@ class FriendlyMatchHostRosterControllerIntegrationTest {
                 .andExpect(status().is(expectedStatus))
                 .andExpect(jsonPath("$.success").value(false))
                 .andExpect(jsonPath("$.code").value(expectedCode));
+
+        assertStoredRoster(List.of(firstMember.id()));
+    }
+
+    // 발급 후 삭제된 호스트 사용자의 실제 JWT 요청은 기존 명단을 변경하기 전에 실패한다.
+    @Test
+    void 호스트의_연결_사용자가_없으면_실제_JWT_요청도_기존_명단을_유지한다() {
+        assertThat(jdbcTemplate.update("delete from users where id = ?", host.userId())).isEqualTo(1);
+        flushAndClear();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from users where id = ?", Long.class, host.userId())).isZero();
+        assertThat(profileRepository.existsById(host.id())).isTrue();
+        assertThat(gameRepository.existsById(game.id())).isTrue();
+        assertThat(matchRepository.existsById(matchId)).isTrue();
+
+        assertThatThrownBy(() -> request(matchId, hostToken, body(List.of())))
+                .isInstanceOf(ServletException.class)
+                .hasRootCauseInstanceOf(IllegalStateException.class)
+                .hasRootCauseMessage("게임 프로필의 연결 사용자가 존재하지 않습니다.");
 
         assertStoredRoster(List.of(firstMember.id()));
     }
