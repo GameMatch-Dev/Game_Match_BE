@@ -4,12 +4,16 @@ import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -17,6 +21,8 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -54,6 +60,15 @@ public class FriendlyMatchJpaEntity {
     @Column(nullable = false, length = 500)
     private String comment;
 
+    @Column(name = "host_roster_confirmed", nullable = false)
+    private boolean hostRosterConfirmed;
+
+    @ElementCollection
+    @CollectionTable(name = "friendly_match_host_member", joinColumns = @JoinColumn(name = "match_id"))
+    @Column(name = "game_user_id", nullable = false)
+    @OrderColumn(name = "member_order")
+    private List<Long> hostTeamMemberIds = new ArrayList<>();
+
     private FriendlyMatchJpaEntity(
             Long hostGameUserId,
             Long gameId,
@@ -72,6 +87,13 @@ public class FriendlyMatchJpaEntity {
         this.state = state;
         this.capacity = capacity;
         this.comment = comment;
+    }
+
+    // 관리 중인 컬렉션을 유지하며 호스트 팀원과 순서를 교체하고 확정 표시를 저장한다.
+    public void confirmHostRoster(List<Long> teamMemberIds) {
+        hostTeamMemberIds.clear();
+        hostTeamMemberIds.addAll(teamMemberIds);
+        hostRosterConfirmed = true;
     }
 
     // FriendlyMatch 도메인 객체를 friendly_match 테이블 행으로 변환한다.
