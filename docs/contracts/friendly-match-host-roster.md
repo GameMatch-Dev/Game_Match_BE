@@ -311,3 +311,28 @@ JWT 사용자와 실제 경기 주최자를 대조하는 관리 권한 검사는
   아직 작성하지 않았다. 추가 명단 검증 정책과 API 종료 Claude 리뷰도 남아 있다.
 - 재개 후 전체 `.\gradlew.bat test` 1회 실행: 실제 XML 34개 suite, 310건 통과,
   실패/오류/건너뜀 0, exit 0, 37초였다. 생성 Service 테스트 10건 모두 통과했다.
+
+## 생성 POST 저장과 실제 롤백 통합 테스트 (2026-11-24)
+
+- 사용자 지시에 따라 테스트 두 파일만 작성했다. 기존 생성 Controller 통합 테스트에
+  명단 생략/null/[]/주최자 포함/불포함 다섯 사례를 추가했다.
+  실제 발급 JWT, 응답 경기 ID와 flush/clear 후 JDBC 조회로 정원 5, 확정 여부와
+  정확한 명단 순서를 확인한다. 정상 저장 경로에 UseCase Mock은 없다.
+- 별도 `FriendlyMatchCreateRosterRollbackIntegrationTest`는 독립 H2와 커밋된 fixture를
+  사용하며 테스트 자체에 @Transactional을 붙이지 않는다.
+- Adapter Spy는 실제 saveHostRoster 메서드를 실행하고 flush 후 경기/명단 행과 확정
+  표시가 DB에 존재함을 확인한 뒤 테스트 전용 예외를 발생시킨다.
+  요청 종료 후 별도 연결에서 실패 ID가 없고 경기/명단 전체 행 수가 기준값으로 복원됨을
+  확인한다. 정리는 캡처한 경기와 fixture ID에 한정한다.
+- 이 예외는 업무 검증이나 운영 HTTP 500 매핑 계약이 아니다. MockMvc에 전달되는
+  ServletException의 실제 원인을 확인하며 제품 예외 처리기를 변경하지 않았다.
+- 독립 검토 수정 필요 결함은 없다. H2의 Service 트랜잭션 롤백 검증이며 MySQL의
+  동시성/잠금 성능이나 운영 DB 적용을 검증한 것은 아니다.
+- 대상 실행: 기존 생성 Controller 포함 11건과 새 롤백 1건, 총 12건 통과.
+  실패/오류/건너뜀 0, exit 0, 22초. Spy/AOP 오류 없이 실행됐다.
+- 전체 `.\gradlew.bat test` 1회 실행: 실제 XML 35개 suite, 316건 통과,
+  실패/오류/건너뜀 0, exit 0, 39초였다.
+- 이번 범위의 테스트 직접 작성은 사용자 지시로 승인됐다. 제품 파일 변경 없음.
+  남은 명단 업무 검증 정책과 API 종료 Codex/Claude 검토는 별도이며 API 전체 종료가 아니다.
+- Codex 시작 주간 잔여 67%/5시간 93%, 완료 시 65%/80%.
+  Claude 주간 사용량 `UNAVAILABLE`, 이번 단계 Claude 호출과 초기화 크레딧 사용 없음.
