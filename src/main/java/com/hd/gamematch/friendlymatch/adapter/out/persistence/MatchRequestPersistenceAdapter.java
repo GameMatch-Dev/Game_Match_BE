@@ -6,7 +6,9 @@ import com.hd.gamematch.friendlymatch.application.port.out.LoadMatchRequestTarge
 import com.hd.gamematch.friendlymatch.application.port.out.SaveMatchRequestPort;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
 import com.hd.gamematch.friendlymatch.domain.MatchRequest;
+import com.hd.gamematch.friendlymatch.domain.MatchRequestState;
 import com.hd.gamematch.friendlymatch.domain.MatchRequestTarget;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -14,6 +16,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Locale;
+import java.util.List;
 import java.util.Optional;
 
 @Component
@@ -25,6 +28,7 @@ public class MatchRequestPersistenceAdapter implements LoadMatchRequestTargetPor
 
     private final FriendlyMatchJpaRepository friendlyMatchJpaRepository;
     private final MatchRequestJpaRepository matchRequestJpaRepository;
+    private final EntityManager entityManager;
 
     // 저장된 경기의 게임과 현재 모집 상태를 조회한다.
     @Override
@@ -51,8 +55,16 @@ public class MatchRequestPersistenceAdapter implements LoadMatchRequestTargetPor
         if (request.id() == null) {
             entity = MatchRequestJpaEntity.from(request);
         } else {
-            // 재신청은 기존 행을 유지하며 내용만 교체한다.
+            // 기존 행을 유지하며 비활성 상태를 선점한 재신청만 허용한다.
             entity = matchRequestJpaRepository.findById(request.id()).orElseThrow();
+            int updatedRows = matchRequestJpaRepository.reactivateIfInactive(
+                    request.id(), request.matchId(), request.gameUserId(), MatchRequestState.PENDING,
+                    request.comment(), List.of(MatchRequestState.CANCELLED, MatchRequestState.REJECTED));
+            if (updatedRows == 0) {
+                throw new MatchRequestAlreadyActiveException();
+            }
+            // 사전 조회로 남은 이전 상태가 조건부 갱신 결과를 덮어쓰지 않게 복원한다.
+            entityManager.refresh(entity);
             entity.update(request);
         }
 
