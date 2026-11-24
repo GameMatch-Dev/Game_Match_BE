@@ -97,3 +97,32 @@ Scope: user-approved replacement of custom JWT filter with Spring Resource Serve
 | Claude direct retry | findings: []; no standalone actionable finding | Reported input 2, cache creation 14,334, cache read 5,652, output 9,939; total cost $0.1678384 | CLI 100.943s |
 
 Product regression evidence: `.\gradlew.bat test`, exit 0, 37s, 160 tests pass before the two test-only additions. Latest targeted execution: JWT suite 9 pass. Do not report a newly executed 162-test full suite. Claude reviewed the unchanged product diff and pre-addition test evidence; the final two tests were reviewed independently by Codex. Provider weekly Claude quota UNAVAILABLE. Both Claude calls used the fixed read-only helper with no tools and no persisted session. Raw outputs are in the task-local `jwt-review` folder; CLI total cost includes auxiliary model usage.
+
+## 2026-11-24 Host roster API end review
+
+Scope: `main...b9a3843`, optional creation roster and PUT host-roster API. User explicitly approved
+this end-review batch below the weekly threshold and transfer of the prepared source bundle to Anthropic.
+Product/test files were unchanged. Existing regression evidence: 344 tests / 35 suites pass, exit 0,
+44s; separately audited against source timestamps and logs without a new test execution.
+
+| Stage | Evidence / result | Actual usage | CLI duration |
+| --- | --- | --- | --- |
+| Codex full independent review | Initial actionable findings 0; separate test audit no blocking gap | Start weekly remaining 42%, 5h 79%; after first review stage 40%, 5h 68%. Token counts UNAVAILABLE | UNAVAILABLE |
+| Claude direct helper attempt | Invalid result: plan-file delivery statement, no findings array; not a completed review | Input 2, cache creation 79,139, cache read 3,293, output 18,754 (thinking 18,689); cost $0.5636086 | 199.435s |
+| Claude static JSON retry | Valid findings 2: Medium 1, Low 1 | Input 2, cache creation 76,917, cache read 0, output 18,125 (thinking 16,861); cost $0.5477770 | 190.504s |
+| Codex finding adjudication | ACCEPT orphan-host-user check gap, downgrade to P3; REJECT duplicated validation as product defect, retain maintenance note | Before adjudication weekly remaining 38%, 5h 53%; tokens UNAVAILABLE | UNAVAILABLE |
+
+CLI-reported total cost **$1.1113856**, summed CLI duration **389.939s**, wrapper wall time **393.901s**.
+Primary review model: `claude-sonnet-5`. CLI modelUsage also reports auxiliary Haiku calls; those costs
+are included in the total but their tokens are not folded into the primary usage fields above.
+Claude weekly remaining quota UNAVAILABLE; no resets or credits consumed. The first attempt used
+the repository helper and fixed template. The retry used the same prepared fixed-template prompt,
+static reviewer system text and JSON schema with dontAsk/no tools/safe mode/no persisted session;
+repository helper source was not changed. No Codex self-review reasoning or full chat was supplied.
+
+The one accepted conditional consistency gap was initially found by Claude, then independently
+confirmed by Codex. Validation duplication was already a Codex maintenance observation, not a new
+standalone actionable Claude finding. No general model-quality advantage is inferred from one case.
+Accepted P3 is not remediated; no source-change re-review was run. Source/Jira and runtime limits,
+exact evidence and finding decisions are in [host roster end review](host-roster-api-end-review.md).
+Final account quota check: Codex weekly remaining 37%, 5h remaining 48%; Claude weekly UNAVAILABLE.
