@@ -2,6 +2,7 @@ package com.hd.gamematch.friendlymatch.application.service;
 
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchCommand;
 import com.hd.gamematch.friendlymatch.application.port.out.SaveFriendlyMatchPort;
+import com.hd.gamematch.friendlymatch.application.port.out.SaveHostRosterPort;
 import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchAccessDeniedException;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
@@ -17,6 +18,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -25,12 +27,16 @@ import java.time.LocalTime;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class CreateFriendlyMatchServiceTest {
@@ -50,6 +56,9 @@ class CreateFriendlyMatchServiceTest {
 
     @Mock
     private SaveFriendlyMatchPort saveFriendlyMatchPort;
+
+    @Mock
+    private SaveHostRosterPort saveHostRosterPort;
 
     @InjectMocks
     private CreateFriendlyMatchService createFriendlyMatchService;
@@ -112,6 +121,82 @@ class CreateFriendlyMatchServiceTest {
         assertThat(creatingFriendlyMatch.state()).isEqualTo(FriendlyMatchState.RECRUITING);
         assertThat(creatingFriendlyMatch.capacity()).isEqualTo(5);
         assertThat(creatingFriendlyMatch.comment()).isEqualTo("저녁에 같이 하실 분");
+    }
+
+    // 선택한 호스트 명단은 매치 저장 후 발급된 ID로 저장하고 그 결과를 반환한다.
+    @Test
+    void 호스트_명단이_있으면_매치_저장_후_명단을_저장한_결과를_반환한다() {
+        // 인증 사용자 소유의 호스트와 미래 팀 경기 요청을 준비한다.
+        Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
+        GameUserProfile host = new GameUserProfile(10L, "hostA", game, 3L);
+        List<Long> hostTeamMemberIds = List.of(20L, 21L);
+        CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
+                3L, 10L, 1L, LocalDate.of(2027, 6, 10), LocalTime.of(20, 0),
+                FriendlyMatchSort.TEAM, 5, "정상 소개", hostTeamMemberIds);
+
+        // 매치 저장 결과와 명단 저장 결과는 필드가 같아도 서로 다른 인스턴스다.
+        FriendlyMatch savedFriendlyMatch = new FriendlyMatch(
+                100L, host, game, command.date(), command.time(), command.sort(),
+                FriendlyMatchState.RECRUITING, command.capacity(), command.comment());
+        FriendlyMatch rosterSavedFriendlyMatch = new FriendlyMatch(
+                100L, host, game, command.date(), command.time(), command.sort(),
+                FriendlyMatchState.RECRUITING, command.capacity(), command.comment());
+        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(10L))).willReturn(host);
+        given(saveFriendlyMatchPort.save(any(FriendlyMatch.class))).willReturn(savedFriendlyMatch);
+        // 아직 명단 저장 호출이 없으면 미사용 설정 대신 호출 순서 검증에서 실패하게 한다.
+        lenient().when(saveHostRosterPort.saveHostRoster(100L, hostTeamMemberIds))
+                .thenReturn(rosterSavedFriendlyMatch);
+
+        // 매치를 생성한 뒤 발급된 ID와 요청 명단 그대로 저장하는 순서를 검증한다.
+        FriendlyMatch result = createFriendlyMatchService.create(command);
+        InOrder order = inOrder(saveFriendlyMatchPort, saveHostRosterPort);
+        order.verify(saveFriendlyMatchPort).save(any(FriendlyMatch.class));
+        order.verify(saveHostRosterPort).saveHostRoster(100L, hostTeamMemberIds);
+
+        // 최종 반환값은 명단 저장 Port가 돌려준 인스턴스여야 한다.
+        assertThat(result).isSameAs(rosterSavedFriendlyMatch);
+    }
+
+    // 호스트 명단을 생략한 기존 생성 호출은 매치 저장 결과를 그대로 반환한다.
+    @Test
+    void 호스트_명단을_생략하면_명단을_저장하지_않는다() {
+        // 명단 인자가 없는 기존 팩토리로 미래 팀 경기 요청을 준비한다.
+        Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
+        GameUserProfile host = new GameUserProfile(10L, "hostA", game, 3L);
+        CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
+                3L, 10L, 1L, LocalDate.of(2027, 6, 10), LocalTime.of(20, 0),
+                FriendlyMatchSort.TEAM, 5, "정상 소개");
+        FriendlyMatch savedFriendlyMatch = new FriendlyMatch(
+                100L, host, game, command.date(), command.time(), command.sort(),
+                FriendlyMatchState.RECRUITING, command.capacity(), command.comment());
+        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(10L))).willReturn(host);
+        given(saveFriendlyMatchPort.save(any(FriendlyMatch.class))).willReturn(savedFriendlyMatch);
+
+        // 명단 저장 없이 생성 완료된 매치 인스턴스를 그대로 반환해야 한다.
+        FriendlyMatch result = createFriendlyMatchService.create(command);
+        verifyNoInteractions(saveHostRosterPort);
+        assertThat(result).isSameAs(savedFriendlyMatch);
+    }
+
+    // 호스트 명단을 명시적으로 null로 전달해도 매치 저장 결과를 그대로 반환한다.
+    @Test
+    void 호스트_명단이_null이면_명단을_저장하지_않는다() {
+        // 명단 인자에 null을 지정한 미래 팀 경기 요청을 준비한다.
+        Game game = Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
+        GameUserProfile host = new GameUserProfile(10L, "hostA", game, 3L);
+        CreateFriendlyMatchCommand command = CreateFriendlyMatchCommand.of(
+                3L, 10L, 1L, LocalDate.of(2027, 6, 10), LocalTime.of(20, 0),
+                FriendlyMatchSort.TEAM, 5, "정상 소개", null);
+        FriendlyMatch savedFriendlyMatch = new FriendlyMatch(
+                100L, host, game, command.date(), command.time(), command.sort(),
+                FriendlyMatchState.RECRUITING, command.capacity(), command.comment());
+        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(10L))).willReturn(host);
+        given(saveFriendlyMatchPort.save(any(FriendlyMatch.class))).willReturn(savedFriendlyMatch);
+
+        // 명단 저장 없이 생성 완료된 매치 인스턴스를 그대로 반환해야 한다.
+        FriendlyMatch result = createFriendlyMatchService.create(command);
+        verifyNoInteractions(saveHostRosterPort);
+        assertThat(result).isSameAs(savedFriendlyMatch);
     }
 
     // 같은 날의 과거 시간과 현재 시각은 모집 가능한 미래 일시가 아니다.
