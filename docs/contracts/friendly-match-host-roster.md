@@ -190,3 +190,28 @@
   Claude 교차 모델 종료 리뷰는 API 구현과 통합 검증 이후 진행한다.
 - 사용량: Codex 주간 잔여 56%에서 53%, 5시간 잔여 70%에서 52%.
   Claude 주간 사용량은 `UNAVAILABLE`이며 이번 단계 호출 없음. 초기화 크레딧 미사용.
+
+## 실제 JWT API 통합 테스트와 PUT CORS RED (2026-11-24)
+
+- 사용자 지시에 따라 테스트 두 파일만 작성/수정했다. 제품 설정과 로직은 변경하지 않았다.
+- 새 `FriendlyMatchHostRosterControllerIntegrationTest`는 실제 발급 JWT와 전체 앱,
+  Controller, Service, Persistence 및 H2를 연결하며 UseCase Mock을 사용하지 않는다.
+- 명단 저장/교체, 미인증 401, 타인 요청 403, 경기 미존재 404와 잘못된 본문 5종의
+  400을 검증한다. 거절 요청은 기존 명단과 확정 표시, 경기 필드와 행 수도 보존해야 한다.
+- 최초 실행은 JWT 10건 통과, CORS 기존 3건 통과/추가 1건 실패로 전체 14건 중 13건 통과.
+  오류/건너뜀 0, Gradle exit 1, 22초였다.
+- 실제 실패는 `Status expected:<200> but was:<403>`이며 요청은 허용 출처의
+  `OPTIONS /friendly-matches/1/host-roster`, 요청 메서드는 PUT이다.
+  응답 본문은 `Invalid CORS request`, Handler는 null로 Controller 이전 CORS 단계다.
+- `SecurityConfig.corsConfigurationSource`의 허용 메서드에 PUT이 없다.
+  테스트 기대값을 낮추지 않고 해당 RED를 유지했다. 제품 설정 수정은 다음 GREEN 단계다.
+- 독립 검토의 최초 확정 전환 보강 제안을 ACCEPT했다. 첫 성공 사례만 DB 명단을 비우고
+  확정 표시 false에서 시작하도록 보강했으며 다른 오류 사례의 확정된 기존 명단은 유지했다.
+- 테스트의 트랜잭션 안에서 flush/clear 후 SQL 상태를 확인한다.
+  요청별 독립 커밋이나 동시성 검증을 완료했다는 뜻은 아니다.
+- 보강 후 최종 실행도 실제 JWT 10건 통과, CORS 3건 통과/PUT 1건 실패로 총 14건 중
+  13건 통과였다. 오류/건너뜀 0, exit 1, 20초. 독립 재검토의 남은 수정 필요 결함은 없다.
+- 이번 실행에서 전체 회귀 테스트는 수행하지 않았다. 이전 294건 통과는 이전 이력이며
+  새 PUT CORS 실패가 해결될 때까지 현재 작업을 전체 GREEN으로 표시하지 않는다.
+- 사용량: Codex 주간 잔여 53%에서 51%, 5시간 잔여 51%에서 35%.
+  Claude 주간 사용량은 `UNAVAILABLE`이며 이번 테스트 단계 호출 없음. 초기화 크레딧 미사용.
