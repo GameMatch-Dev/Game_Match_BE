@@ -8,6 +8,7 @@ import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
 import com.hd.gamematch.game.domain.Game;
+import com.hd.gamematch.gameuser.application.exception.GameUserNotFoundException;
 import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserQuery;
 import com.hd.gamematch.gameuser.application.port.in.find.FindGameUserUseCase;
 import com.hd.gamematch.gameuser.domain.GameUserProfile;
@@ -15,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -38,6 +40,7 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
@@ -146,6 +149,10 @@ class CreateFriendlyMatchServiceTest {
         given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(10L))).willReturn(host);
         given(saveFriendlyMatchPort.save(any(FriendlyMatch.class))).willReturn(savedFriendlyMatch);
         // 아직 명단 저장 호출이 없으면 미사용 설정 대신 호출 순서 검증에서 실패하게 한다.
+        if (!hostTeamMemberIds.isEmpty()) {
+            lenient().when(findGameUserUseCase.findGameUsers(hostTeamMemberIds))
+                    .thenReturn(rosterProfiles(hostTeamMemberIds, game));
+        }
         lenient().when(saveHostRosterPort.saveHostRoster(100L, hostTeamMemberIds))
                 .thenReturn(rosterSavedFriendlyMatch);
 
@@ -157,6 +164,116 @@ class CreateFriendlyMatchServiceTest {
 
         // 최종 반환값은 명단 저장 Port가 돌려준 인스턴스여야 한다.
         assertThat(result).isSameAs(rosterSavedFriendlyMatch);
+    }
+
+    // 같은 프로필을 중복 지정하면 생성과 명단 저장을 막는다.
+    @Test
+    void 중복된_호스트_명단이면_저장하지_않는다() {
+        CreateFriendlyMatchCommand command = rosterCommand(FriendlyMatchSort.TEAM, List.of(20L, 20L));
+        prepareRosterRequest(command);
+
+        assertThatThrownBy(() -> createFriendlyMatchService.create(command))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(saveFriendlyMatchPort, saveHostRosterPort);
+    }
+
+    // 참가자 조회의 미존재 예외를 전달하고 생성 전에 저장을 막는다.
+    @Test
+    void 명단의_게임_프로필이_없으면_저장하지_않는다() {
+        CreateFriendlyMatchCommand command = rosterCommand(FriendlyMatchSort.TEAM, List.of(20L, 99L));
+        prepareRosterRequest(command);
+        lenient().when(findGameUserUseCase.findGameUsers(command.hostTeamMemberIds()))
+                .thenThrow(new GameUserNotFoundException());
+
+        assertThatThrownBy(() -> createFriendlyMatchService.create(command))
+                .isInstanceOf(GameUserNotFoundException.class);
+        verifyNoInteractions(saveFriendlyMatchPort, saveHostRosterPort);
+    }
+
+    // 호스트와 다른 게임의 참가자는 모집 생성 전에 거절한다.
+    @Test
+    void 명단에_다른_게임_프로필이_있으면_저장하지_않는다() {
+        CreateFriendlyMatchCommand command = rosterCommand(FriendlyMatchSort.TEAM, List.of(20L, 21L));
+        prepareRosterRequest(command);
+        Game otherGame = Game.of(2L, "Other Game", "FPS", null);
+        lenient().when(findGameUserUseCase.findGameUsers(command.hostTeamMemberIds()))
+                .thenReturn(List.of(new GameUserProfile(20L, "member20", rosterGame(), 4L),
+                        new GameUserProfile(21L, "member21", otherGame, 5L)));
+
+        assertThatThrownBy(() -> createFriendlyMatchService.create(command))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(saveFriendlyMatchPort, saveHostRosterPort);
+    }
+
+    // 두 모집 방식에서 실제 참가자 수가 최대 인원을 초과하면 저장을 막는다.
+    @ParameterizedTest
+    @EnumSource(FriendlyMatchSort.class)
+    void 명단이_최대_인원을_초과하면_저장하지_않는다(FriendlyMatchSort sort) {
+        CreateFriendlyMatchCommand command = rosterCommand(sort, List.of(20L, 21L, 22L, 23L, 24L, 25L));
+        prepareRosterRequest(command);
+        lenient().when(findGameUserUseCase.findGameUsers(command.hostTeamMemberIds()))
+                .thenReturn(rosterProfiles(command.hostTeamMemberIds(), rosterGame()));
+
+        assertThatThrownBy(() -> createFriendlyMatchService.create(command))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(saveFriendlyMatchPort, saveHostRosterPort);
+    }
+
+    // 참가하지 않는 주최자를 더하지 않고 명단의 실제 참가자만 센다.
+    @ParameterizedTest
+    @EnumSource(FriendlyMatchSort.class)
+    void 명단이_최대_인원과_같으면_저장한다(FriendlyMatchSort sort) {
+        List<Long> ids = List.of(20L, 21L, 22L, 23L, 24L);
+        CreateFriendlyMatchCommand command = rosterCommand(sort, ids);
+        FriendlyMatch saved = prepareRosterRequest(command);
+        lenient().when(findGameUserUseCase.findGameUsers(ids)).thenReturn(rosterProfiles(ids, rosterGame()));
+        given(saveHostRosterPort.saveHostRoster(100L, ids)).willReturn(saved);
+
+        assertThat(createFriendlyMatchService.create(command)).isSameAs(saved);
+        then(saveHostRosterPort).should().saveHostRoster(100L, ids);
+    }
+
+    // 두 모집 방식에서 빈 명단도 확정 명단으로 저장한다.
+    @ParameterizedTest
+    @EnumSource(FriendlyMatchSort.class)
+    void 빈_명단도_확정하여_저장한다(FriendlyMatchSort sort) {
+        List<Long> ids = List.of();
+        CreateFriendlyMatchCommand command = rosterCommand(sort, ids);
+        FriendlyMatch saved = prepareRosterRequest(command);
+        given(saveHostRosterPort.saveHostRoster(100L, ids)).willReturn(saved);
+
+        assertThat(createFriendlyMatchService.create(command)).isSameAs(saved);
+        then(saveHostRosterPort).should().saveHostRoster(100L, ids);
+    }
+
+    // 검증 누락이 저장 반환값의 null 오류로 가려지지 않게 정상 결과를 준비한다.
+    private FriendlyMatch prepareRosterRequest(CreateFriendlyMatchCommand command) {
+        Game game = rosterGame();
+        GameUserProfile host = new GameUserProfile(10L, "hostA", game, 3L);
+        given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(10L))).willReturn(host);
+        FriendlyMatch saved = new FriendlyMatch(
+                100L, host, game, command.date(), command.time(), command.sort(),
+                FriendlyMatchState.RECRUITING, command.capacity(), command.comment());
+        lenient().when(saveFriendlyMatchPort.save(any(FriendlyMatch.class))).thenReturn(saved);
+        return saved;
+    }
+
+    // 모집 방식과 참가자 명단을 지정한 생성 요청을 준비한다.
+    private CreateFriendlyMatchCommand rosterCommand(FriendlyMatchSort sort, List<Long> ids) {
+        return CreateFriendlyMatchCommand.of(
+                3L, 10L, 1L, LocalDate.of(2027, 6, 10), LocalTime.of(20, 0),
+                sort, 5, "정상 소개", ids);
+    }
+
+    // 호스트와 참가자가 함께 사용할 기준 게임을 준비한다.
+    private Game rosterGame() {
+        return Game.of(1L, "League of Legends", "MOBA", "https://example.com/lol");
+    }
+
+    // 명단의 각 식별자에 대응하는 같은 게임 프로필을 준비한다.
+    private List<GameUserProfile> rosterProfiles(List<Long> ids, Game game) {
+        return ids.stream().map(id -> new GameUserProfile(id, "member" + id, game,
+                id.equals(10L) ? 3L : id)).toList();
     }
 
     // 실제 참가자 명단은 주최자를 포함하거나 참가자가 없는 확정 명단일 수 있다.
@@ -237,7 +354,8 @@ class CreateFriendlyMatchServiceTest {
                 LocalTime.of(20, 0),
                 FriendlyMatchSort.TEAM,
                 5,
-                "저녁에 같이 하실 분"
+                "저녁에 같이 하실 분",
+                List.of(20L, 21L)
         );
         given(findGameUserUseCase.findGameUser(FindGameUserQuery.of(10L)))
                 .willReturn(anotherUsersHost);
@@ -246,6 +364,7 @@ class CreateFriendlyMatchServiceTest {
         assertThatThrownBy(() -> createFriendlyMatchService.create(command))
                 .isInstanceOf(FriendlyMatchAccessDeniedException.class)
                 .hasMessage("친선 경기 모집을 만들 권한이 없습니다.");
+        then(findGameUserUseCase).should(never()).findGameUsers(any());
 
         // 실패한 요청은 매치 저장으로 이어지면 안 된다.
         then(saveFriendlyMatchPort).shouldHaveNoInteractions();
