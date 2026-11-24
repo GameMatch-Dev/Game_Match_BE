@@ -5,7 +5,8 @@
 
 - hostGameUserId, gameId: 필수 양수.
 - date, time: 필수. 형식 오류는 400 COMMON_400.
-- capacity: 필수 양수이며 전체 참가 정원이다.
+- capacity: 필수 양수이다. TEAM에서는 대표자를 포함한 팀별 최대 인원이다.
+  호스트 팀과 상대 팀 두 팀으로 구성되며, 5대5 경기의 capacity는 5이다.
 - sort: 0 TEAM, 1 INDIVIDUAL. 누락과 그 외 값은 400.
 - comment: null, 빈 문자열, 공백만 있는 문자열은 거부하며 최대 500자.
   trim으로 내용을 변경하지 않는다. 500자 경계의 정상 요청을 검증한다.
@@ -20,3 +21,12 @@ WebMvc는 입력 거부와 UseCase 미호출을 검증하고, Service 단위 테
 Jira GM-35는 조회 당시 recruit 명칭과 타인 프로필 400이 남아 있었다.
 대화에서 승인된 capacity 및 타인 프로필 403과 위 입력 정책의 동기화가 필요하다.
 이 문서 작성 중 원격 Jira는 변경하지 않았다.
+
+## 2026-11-24 사용자 정정
+
+위 TEAM capacity 해석은 2026-11-24 사용자의 명시적 정정을 반영한다.
+종전의 "전체 참가 정원" 해석은 이 정정으로 대체된다. 이 정정은 TEAM에만
+적용하며 INDIVIDUAL의 capacity 의미를 새로 정의하지 않는다. 최대 인원은
+모든 자리를 채우거나 양 팀 인원이 같아야 한다는 요건을 뜻하지 않는다.
+후속 호스트 팀 명단 정책과 아직 승인되지 않은 API 제안은
+[`friendly-match-host-roster.md`](../contracts/friendly-match-host-roster.md)에 구분한다.
