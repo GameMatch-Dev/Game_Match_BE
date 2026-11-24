@@ -10,6 +10,7 @@ import tools.jackson.databind.annotation.JsonDeserialize;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 
 public record CreateFriendlyMatchRequest(
         @JsonDeserialize(using = FriendlyMatchIntegerDeserializers.LongValue.class)
@@ -22,7 +23,9 @@ public record CreateFriendlyMatchRequest(
         Integer sort,
         @JsonDeserialize(using = FriendlyMatchIntegerDeserializers.IntegerValue.class)
         @NotNull @Positive Integer capacity,
-        @NotBlank @Size(max = 500) String comment
+        @NotBlank @Size(max = 500) String comment,
+        @JsonDeserialize(contentUsing = FriendlyMatchIntegerDeserializers.LongValue.class)
+        List<@NotNull @Positive Long> hostTeamMemberIds
 ) {
 
     // HTTP JSON 요청값과 JWT에서 얻은 사용자 ID를 친선 경기 생성 Command로 변환한다.
@@ -35,7 +38,8 @@ public record CreateFriendlyMatchRequest(
                 time,
                 toSort(sort),
                 capacity,
-                comment
+                comment,
+                hostTeamMemberIds
         );
     }
 
