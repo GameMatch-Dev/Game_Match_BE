@@ -18,6 +18,7 @@ import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -165,12 +167,55 @@ class FriendlyMatchHostRosterControllerIntegrationTest {
         assertStoredRoster(List.of(firstMember.id()));
     }
 
-    // 각 프로필을 서로 다른 실제 사용자에게 연결한다.
+    // 실제 PUT의 정책 오류는 기존 확정 명단과 경기 정보를 변경하지 않는다.
+    @ParameterizedTest
+    @CsvSource({"duplicate, TEAM, 400, COMMON_400", "missing, TEAM, 404, GAME_USER_001",
+            "wronggame, TEAM, 400, COMMON_400", "overflow, TEAM, 400, COMMON_400",
+            "overflow, INDIVIDUAL, 400, COMMON_400"})
+    void 잘못된_명단의_확정_요청은_오류를_반환하고_기존_명단을_유지한다(
+            String rosterCase, FriendlyMatchSort sort, int expectedStatus, String expectedCode) throws Exception {
+        // 개인전도 실제 저장된 경기 유형으로 검증하며 비교 기준을 요청 전에 다시 읽는다.
+        flushAndClear();
+        jdbcTemplate.update("update friendly_match set sort = ? where id = ?", sort.name(), matchId);
+        flushAndClear();
+        originalMetadata = storedMetadata();
+        List<Long> requestedMembers;
+        if (rosterCase.equals("wronggame")) {
+            GameJpaEntity savedGame = gameRepository.saveAndFlush(
+                    GameJpaEntity.of("Other game", "FPS", "https://example.com/other"));
+            Game otherGame = Game.of(savedGame.getId(), savedGame.getName(), savedGame.getSort(), savedGame.getUrl());
+            requestedMembers = List.of(secondMember.id(), saveProfile("other-game-member", otherGame).id());
+        } else if (rosterCase.equals("overflow")) {
+            // 중복이나 없는 ID가 아닌 같은 게임의 유효한 프로필 여섯 개로 정원만 초과한다.
+            requestedMembers = new ArrayList<>(List.of(firstMember.id(), secondMember.id(), thirdMember.id()));
+            for (int index = 0; index < 3; index++) {
+                requestedMembers.add(saveProfile("overflow-member-" + index).id());
+            }
+        } else {
+            requestedMembers = rosterCase.equals("duplicate")
+                    ? List.of(secondMember.id(), secondMember.id())
+                    : List.of(secondMember.id(), Long.MAX_VALUE);
+        }
+
+        request(matchId, hostToken, body(requestedMembers))
+                .andExpect(status().is(expectedStatus))
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value(expectedCode));
+
+        assertStoredRoster(List.of(firstMember.id()));
+    }
+
+    // 기본 경기의 프로필을 서로 다른 실제 사용자에게 연결한다.
     private GameUserProfile saveProfile(String nickname) {
+        return saveProfile(nickname, game);
+    }
+
+    // 지정한 게임에 속하는 실제 프로필을 저장해 다른 게임의 명단 오류도 재현한다.
+    private GameUserProfile saveProfile(String nickname, Game profileGame) {
         UserJpaEntity user = userRepository.saveAndFlush(UserJpaEntity.create());
         GameUserJpaEntity profile = profileRepository.saveAndFlush(
-                GameUserJpaEntity.of(user.getId(), game.id(), nickname));
-        return new GameUserProfile(profile.getId(), nickname, game, user.getId());
+                GameUserJpaEntity.of(user.getId(), profileGame.id(), nickname));
+        return new GameUserProfile(profile.getId(), nickname, profileGame, user.getId());
     }
 
     // 실제 발급한 JWT를 Authorization 헤더에 넣어 PUT 요청을 보낸다.
