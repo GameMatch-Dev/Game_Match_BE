@@ -89,7 +89,7 @@ class FriendlyMatchHostRosterPersistenceAdapterIntegrationTest {
         assertThat(adapter.loadFriendlyMatch(Long.MAX_VALUE)).isEmpty();
     }
 
-    // 호스트를 제외한 팀원 입력 순서와 명단 확정 표시를 실제 DB에 저장한다.
+    // 명시한 실제 참가자의 입력 순서와 명단 확정 표시를 실제 DB에 저장한다.
     @Test
     void 호스트_명단의_입력_순서와_확정_표시를_저장하고_경기를_반환한다() {
         List<Long> members = List.of(secondMemberId, firstMemberId);
