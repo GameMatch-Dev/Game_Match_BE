@@ -5,6 +5,12 @@ import com.hd.gamematch.auth.adapter.out.persistence.UserJpaRepository;
 import com.hd.gamematch.auth.security.JwtTokenService;
 import com.hd.gamematch.friendlymatch.adapter.out.persistence.FriendlyMatchJpaEntity;
 import com.hd.gamematch.friendlymatch.adapter.out.persistence.FriendlyMatchJpaRepository;
+import com.hd.gamematch.friendlymatch.adapter.out.persistence.MatchRequestJpaEntity;
+import com.hd.gamematch.friendlymatch.adapter.out.persistence.MatchRequestJpaRepository;
+import com.hd.gamematch.friendlymatch.application.port.in.approve.ApproveMatchRequestUseCase;
+import com.hd.gamematch.friendlymatch.application.port.in.approve.ApproveMatchRequestCommand;
+import com.hd.gamematch.friendlymatch.domain.MatchRequest;
+import com.hd.gamematch.friendlymatch.domain.MatchRequestState;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
@@ -20,6 +26,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -56,6 +63,8 @@ class FriendlyMatchHostRosterControllerIntegrationTest {
     @Autowired private JwtTokenService jwtTokenService;
     @Autowired private EntityManager entityManager;
     @Autowired private JdbcTemplate jdbcTemplate;
+    @Autowired private MatchRequestJpaRepository requestRepository;
+    @Autowired private ApproveMatchRequestUseCase approveMatchRequestUseCase;
 
     private Game game;
     private GameUserProfile host;
@@ -67,6 +76,39 @@ class FriendlyMatchHostRosterControllerIntegrationTest {
     private String otherUserToken;
     private Map<String, Object> originalMetadata;
     private long originalMatchCount;
+
+    // 실제 승인 후 JWT 명단 변경 요청을 보내 모집 상태와 별개로 명단을 고정한다.
+    @ParameterizedTest
+    @EnumSource(FriendlyMatchSort.class)
+    void 실제_승인_후_주최_명단을_변경하면_409와_기존_명단을_유지한다(FriendlyMatchSort sort) throws Exception {
+        // given: 개인전은 정원에 여유가 남고 TEAM은 승인으로 모집이 닫힌다.
+        FriendlyMatch match = new FriendlyMatch(null, host, game, LocalDate.of(2027, 6, 10),
+                LocalTime.of(20, 0), sort, FriendlyMatchState.RECRUITING, 5, "명단 고정 검증");
+        FriendlyMatchJpaEntity entity = FriendlyMatchJpaEntity.from(match);
+        entity.confirmHostRoster(List.of(firstMember.id()));
+        Long targetId = matchRepository.saveAndFlush(entity).getId();
+        Long requestId = requestRepository.saveAndFlush(MatchRequestJpaEntity.from(new MatchRequest(
+                null, targetId, secondMember.id(), List.of(), "상대 신청", MatchRequestState.PENDING))).getId();
+        approveMatchRequestUseCase.approve(ApproveMatchRequestCommand.of(host.userId(), requestId));
+        entityManager.flush();
+        entityManager.clear();
+        FriendlyMatchState expectedState = sort == FriendlyMatchSort.TEAM
+                ? FriendlyMatchState.RECRUITMENT_CLOSED : FriendlyMatchState.RECRUITING;
+        assertThat(matchRepository.findById(targetId).orElseThrow().getState()).isEqualTo(expectedState);
+
+        // when / then: 빈 명단으로 교체하려 해도 승인 후 변경은 409다.
+        mockMvc.perform(put("/friendly-matches/{matchId}/host-roster", targetId)
+                        .header(HttpHeaders.AUTHORIZATION, "Bearer " + hostToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"teamMemberIds\": []}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("FRIENDLY_MATCH_002"));
+        entityManager.clear();
+        assertThat(jdbcTemplate.queryForList(
+                "select game_user_id from friendly_match_host_member where match_id = ? order by member_order",
+                Long.class, targetId)).containsExactly(firstMember.id());
+        assertThat(requestRepository.findById(requestId).orElseThrow().getState()).isEqualTo(MatchRequestState.APPROVED);
+    }
 
     // 실제 사용자와 프로필 및 확정된 기존 명단을 저장하고 소유자별 JWT를 발급한다.
     @BeforeEach
