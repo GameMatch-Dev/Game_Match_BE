@@ -8,8 +8,24 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Collection;
 import java.util.Optional;
+import java.util.List;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.Lock;
 
 public interface MatchRequestJpaRepository extends JpaRepository<MatchRequestJpaEntity, Long> {
+
+    // 최초 조회는 식별자만 읽어 신청 Entity의 오래된 상태를 캐시하지 않는다.
+    @Query("select request.matchId from MatchRequestJpaEntity request where request.id = :id")
+    Optional<Long> findMatchIdByRequestId(@Param("id") Long id);
+
+    // 경기 잠금을 얻은 후 신청 행의 최신 상태를 잠금 조회한다.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select request from MatchRequestJpaEntity request where request.id = :id")
+    Optional<MatchRequestJpaEntity> findByIdForUpdate(@Param("id") Long id);
+
+    // 일반 스냅샷 조회 대신 잠금 읽기로 현재 승인된 신청을 확인한다.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    List<MatchRequestJpaEntity> findByMatchIdAndStateOrderById(Long matchId, MatchRequestState state);
 
     // 경기와 신청자 조합에 해당하는 신청을 조회한다.
     Optional<MatchRequestJpaEntity> findByMatchIdAndGameUserId(Long matchId, Long gameUserId);
