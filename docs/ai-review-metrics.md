@@ -143,3 +143,38 @@ The original Claude discovery and $1.1113856 cost remain unchanged, not overwrit
 validation. No Claude post-fix review, new external transmission, reset, operational DB action or merge.
 Runtime evidence is H2; HTTP invariance tests use ambient test transactions and do not by themselves
 establish independent request commits. Existing nonambient creation rollback test remains in the full suite.
+
+## 2026-11-25 Match request approval API end review
+
+Product review baseline: a570a6b..036876d, 44 files. User approved this whole end-review scope
+and the external transmission at Codex weekly remaining 7%; Claude weekly quota UNAVAILABLE.
+No reset, full conversation or secret configuration was used. Jira and Notion access gaps are recorded.
+
+| Stage | Result | Executed evidence / usage |
+| --- | --- | --- |
+| Codex independent whole-API review | No actionable product finding | Separate reviewer; exact Codex tokens and review elapsed time UNAVAILABLE |
+| Separate evidence audit | Confirmed 429 tests / 41 suites, failures/errors/skips 0 | Gradle 38s, exit0; run preceded the final three unchanged test-file commits; no execution-time source hash snapshot |
+| Claude helper direct | Invalid final format: plan-file narrative, not findings JSON | 267.521s, $0.8500216; input/cache creation/cache read/output 2/125281/3293/25230 tokens |
+| Same-source static JSON retry | Valid findings 2: High1, Medium1 | 222.479s, $0.8071010; input/cache creation/cache read/output 2/122773/0/22003 tokens |
+| Claude total | One valid review and one format failure | CLI 490.000s, $1.6571226; wrapper wall 497.932756s; sonnet-5 primary plus haiku-4-5 auxiliary costs included |
+| Adjudication | Product ACCEPT0 / REJECT2 | Separate Codex reviewer confirmed both decisions; stale workflow metadata in supplied requirement acknowledged and corrected separately |
+
+CR-1 inferred unauthorized implementation from an obsolete learning-mode-pending paragraph in the
+review input. The user had actually selected initial-code and explicitly authorized each named scope.
+This is a coordinator input-preparation defect, not an unapproved product implementation. Original
+input is retained and a correction added; Claude was not rerun on that correction.
+
+CR-2 treated the normal TEAM closed-state 409 as a contract mismatch and the opponent guard as
+untested. Contract does not require the opponent reason to precede not-recruiting, and Service test
+line242 covers RECRUITING plus opponentApproved. Changing TEAM to remain recruiting would conflict
+with the approved policy. No product code changed after review; no extra test run was needed.
+
+The raw model narration about unspecified issues from the invalid first attempt is not counted as
+findings. Exact CLI cost is provider metadata, not a separately checked billing statement. Do not infer
+general model quality superiority from this case. Repository helper was not modified. Read-only
+retry changed output enforcement and static system instructions, retaining the fixed requirement/diff/
+context/test template and tool denial. No product-source re-review was run.
+
+H2 evidence includes independent commit/rollback2 and actual HTTP concurrency3. MySQL runtime,
+FIFO and performance comparison remain unverified. Full finding decisions and limits are in
+[approval API end review](match-request-approval-api-end-review.md).
