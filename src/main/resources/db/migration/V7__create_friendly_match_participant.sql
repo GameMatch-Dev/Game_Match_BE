@@ -1,0 +1,13 @@
+CREATE TABLE friendly_match_participant (
+    id BIGINT NOT NULL AUTO_INCREMENT,
+    match_id BIGINT NOT NULL,
+    request_id BIGINT NOT NULL,
+    game_user_id BIGINT NOT NULL,
+    member_order INT NOT NULL,
+    PRIMARY KEY (id),
+    CONSTRAINT uk_match_participant_profile UNIQUE (match_id, game_user_id),
+    CONSTRAINT uk_match_participant_order UNIQUE (request_id, member_order),
+    CONSTRAINT fk_match_participant_match FOREIGN KEY (match_id) REFERENCES friendly_match (id),
+    CONSTRAINT fk_match_participant_request FOREIGN KEY (request_id) REFERENCES match_request (id),
+    CONSTRAINT fk_match_participant_profile FOREIGN KEY (game_user_id) REFERENCES game_user (id)
+) ENGINE = InnoDB;

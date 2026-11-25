@@ -36,6 +36,9 @@ public record CreateFriendlyMatchResponse(
                 },
                 switch (friendlyMatch.state()) {
                     case RECRUITING -> 0;
+                    // 생성 응답에서 미확정된 모집 종료 상태의 공개 코드를 임의로 부여하지 않는다.
+                    case RECRUITMENT_CLOSED -> throw new IllegalStateException(
+                            "모집 종료 상태는 경기 생성 응답으로 변환할 수 없습니다.");
                 },
                 friendlyMatch.capacity(),
                 friendlyMatch.comment()

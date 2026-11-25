@@ -3,6 +3,8 @@ package com.hd.gamematch.friendlymatch.adapter.out.persistence;
 import com.hd.gamematch.auth.adapter.out.persistence.UserJpaEntity;
 import com.hd.gamematch.auth.adapter.out.persistence.UserJpaRepository;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
+import com.hd.gamematch.friendlymatch.domain.HostRosterEditContext;
+import com.hd.gamematch.friendlymatch.application.exception.HostRosterLockedException;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchSort;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatchState;
 import com.hd.gamematch.game.adapter.out.persistence.GameJpaEntity;
@@ -181,6 +183,31 @@ class FriendlyMatchHostRosterPersistenceAdapterIntegrationTest {
         assertThat(profileRepository.existsById(host.id())).isTrue();
         assertThat(gameRepository.existsById(game.id())).isTrue();
         assertThat(matchRepository.existsById(expectedMatch.id())).isTrue();
+    }
+
+    // 승인과 동일한 경기 잠금 조회로 수정 판단에 필요한 정보를 복원한다.
+    @Test
+    void 승인_없는_경기의_잠금_조회는_명단_수정을_허용한다() {
+        HostRosterEditContext context = adapter.loadForUpdate(expectedMatch.id()).orElseThrow();
+        assertThat(context.match()).usingRecursiveComparison().isEqualTo(expectedMatch);
+        assertThat(context.hasApprovedRequests()).isFalse();
+    }
+
+    // 모집 중인 개인전도 승인 기록이 있으면 직접 저장 경로를 차단한다.
+    @Test
+    void 승인_기록이_있으면_저장_포트_직접_호출도_명단을_보존한다() {
+        // given: 실제 승인 기록은 경기 모집 상태와 별개로 존재한다.
+        adapter.saveHostRoster(expectedMatch.id(), List.of(firstMemberId));
+        jdbcTemplate.update("insert into match_request (match_id, game_user_id, state, comment) values (?, ?, ?, ?)",
+                expectedMatch.id(), secondMemberId, "APPROVED", "승인된 신청");
+        flushAndClear();
+
+        // when / then: 빈 명단 교체 요청도 거절하고 기존 명단을 유지한다.
+        assertThat(adapter.loadForUpdate(expectedMatch.id()).orElseThrow().hasApprovedRequests()).isTrue();
+        assertThatThrownBy(() -> adapter.saveHostRoster(expectedMatch.id(), List.of()))
+                .isInstanceOf(HostRosterLockedException.class);
+        flushAndClear();
+        assertThat(storedMemberIds(expectedMatch.id())).containsExactly(firstMemberId);
     }
 
     // DB에서 복원한 경기와 호스트 및 게임의 모든 필드 값을 재귀적으로 비교한다.

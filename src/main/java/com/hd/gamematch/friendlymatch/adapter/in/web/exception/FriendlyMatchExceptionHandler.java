@@ -3,9 +3,13 @@ package com.hd.gamematch.friendlymatch.adapter.in.web.exception;
 import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchAccessDeniedException;
 import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchNotFoundException;
 import com.hd.gamematch.friendlymatch.application.exception.HostRosterAccessDeniedException;
+import com.hd.gamematch.friendlymatch.application.exception.HostRosterLockedException;
 import com.hd.gamematch.friendlymatch.application.exception.MatchNotRecruitingException;
 import com.hd.gamematch.friendlymatch.application.exception.MatchRequestAccessDeniedException;
 import com.hd.gamematch.friendlymatch.application.exception.MatchRequestAlreadyActiveException;
+import com.hd.gamematch.friendlymatch.application.exception.MatchApprovalAccessDeniedException;
+import com.hd.gamematch.friendlymatch.application.exception.MatchApprovalConflictException;
+import com.hd.gamematch.friendlymatch.application.exception.MatchRequestNotFoundException;
 import com.hd.gamematch.global.exception.ErrorCode;
 import com.hd.gamematch.global.exception.code.AuthErrorCode;
 import com.hd.gamematch.global.exception.code.FriendlyMatchErrorCode;
@@ -18,6 +22,26 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 // 친선 경기 웹 어댑터의 업무 예외를 HTTP 오류 응답으로 변환한다.
 @RestControllerAdvice
 public class FriendlyMatchExceptionHandler {
+
+    // 경기 주최자의 승인 권한 오류를 공통 403 응답으로 변환한다.
+    @ExceptionHandler(MatchApprovalAccessDeniedException.class)
+    public ResponseEntity<CommonResponse<Void>> handleMatchApprovalAccessDenied(
+            MatchApprovalAccessDeniedException exception
+    ) {
+        return errorResponse(AuthErrorCode.AUTH_403, exception.getMessage());
+    }
+
+    // 승인 대상 신청이 없으면 신청 미존재 코드와 404를 반환한다.
+    @ExceptionHandler(MatchRequestNotFoundException.class)
+    public ResponseEntity<CommonResponse<Void>> handleMatchRequestNotFound(MatchRequestNotFoundException exception) {
+        return errorResponse(MatchRequestErrorCode.MATCH_REQUEST_001, exception.getMessage());
+    }
+
+    // 승인 상태와 정원 및 명단의 업무 충돌 사유를 보존해 409로 응답한다.
+    @ExceptionHandler(MatchApprovalConflictException.class)
+    public ResponseEntity<CommonResponse<Void>> handleMatchApprovalConflict(MatchApprovalConflictException exception) {
+        return errorResponse(MatchRequestErrorCode.MATCH_REQUEST_004, exception.getMessage());
+    }
 
     // 타인의 게임 프로필을 호스트로 지정한 요청을 403 응답으로 변환한다.
     @ExceptionHandler(FriendlyMatchAccessDeniedException.class)
@@ -39,6 +63,12 @@ public class FriendlyMatchExceptionHandler {
             HostRosterAccessDeniedException exception
     ) {
         return errorResponse(AuthErrorCode.AUTH_403, exception.getMessage());
+    }
+
+    // 승인 후 주최 명단 변경을 409 업무 충돌로 응답한다.
+    @ExceptionHandler(HostRosterLockedException.class)
+    public ResponseEntity<CommonResponse<Void>> handleHostRosterLocked(HostRosterLockedException exception) {
+        return errorResponse(FriendlyMatchErrorCode.FRIENDLY_MATCH_002, exception.getMessage());
     }
 
     // 존재하지 않는 친선 경기의 신청을 404 응답으로 변환한다.
