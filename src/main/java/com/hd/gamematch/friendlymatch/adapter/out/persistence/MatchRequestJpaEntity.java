@@ -71,6 +71,11 @@ public class MatchRequestJpaEntity {
         teamMemberIds.addAll(request.teamMemberIds());
     }
 
+    // 신청 명단과 소개를 유지하고 처리 상태만 승인으로 바꾼다.
+    public void approve() {
+        state = MatchRequestState.APPROVED;
+    }
+
     // 저장된 상태와 팀원 순서를 도메인 값으로 복원한다.
     public MatchRequest toDomain() {
         return new MatchRequest(id, matchId, gameUserId, List.copyOf(teamMemberIds), comment, state);
