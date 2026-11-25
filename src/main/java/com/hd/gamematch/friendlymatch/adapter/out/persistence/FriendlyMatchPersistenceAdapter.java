@@ -3,6 +3,12 @@ package com.hd.gamematch.friendlymatch.adapter.out.persistence;
 import com.hd.gamematch.auth.adapter.out.persistence.UserJpaRepository;
 import com.hd.gamematch.friendlymatch.application.port.out.SaveFriendlyMatchPort;
 import com.hd.gamematch.friendlymatch.application.port.out.LoadFriendlyMatchPort;
+import com.hd.gamematch.friendlymatch.application.port.out.LoadHostRosterEditContextPort;
+import com.hd.gamematch.friendlymatch.application.exception.HostRosterLockedException;
+import com.hd.gamematch.friendlymatch.domain.HostRosterEditContext;
+import com.hd.gamematch.friendlymatch.domain.MatchRequestState;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import com.hd.gamematch.friendlymatch.application.port.out.SaveHostRosterPort;
 import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchNotFoundException;
 import com.hd.gamematch.friendlymatch.domain.FriendlyMatch;
@@ -22,12 +28,30 @@ import java.util.Optional;
 @Component
 @RequiredArgsConstructor
 public class FriendlyMatchPersistenceAdapter implements SaveFriendlyMatchPort,
-        LoadFriendlyMatchPort, SaveHostRosterPort {
+        LoadFriendlyMatchPort, SaveHostRosterPort, LoadHostRosterEditContextPort {
 
     private final FriendlyMatchJpaRepository friendlyMatchJpaRepository;
     private final GameUserJpaRepository gameUserJpaRepository;
     private final GameJpaRepository gameJpaRepository;
     private final UserJpaRepository userJpaRepository;
+    private final MatchRequestJpaRepository matchRequestJpaRepository;
+    private final EntityManager entityManager;
+
+    // 승인과 같은 경기 행 잠금 안에서 권한과 첫 승인 여부를 판단할 정보를 복원한다.
+    @Override
+    @Transactional
+    public Optional<HostRosterEditContext> loadForUpdate(Long matchId) {
+        return friendlyMatchJpaRepository.findByIdForUpdate(matchId).map(entity -> {
+            entityManager.refresh(entity, LockModeType.PESSIMISTIC_WRITE);
+            return new HostRosterEditContext(toDomain(entity), hasApprovedRequests(matchId));
+        });
+    }
+
+    // 경기 잠금 뒤 현재 승인 기록을 읽어 모집 상태와 별개로 명단 변경을 제한한다.
+    private boolean hasApprovedRequests(Long matchId) {
+        return !matchRequestJpaRepository.findByMatchIdAndStateOrderById(
+                matchId, MatchRequestState.APPROVED).isEmpty();
+    }
 
     // 경기 행과 실제 호스트 프로필 및 게임 정보를 한 트랜잭션 안에서 복원한다.
     @Override
@@ -40,8 +64,12 @@ public class FriendlyMatchPersistenceAdapter implements SaveFriendlyMatchPort,
     @Override
     @Transactional
     public FriendlyMatch saveHostRoster(Long matchId, List<Long> teamMemberIds) {
-        FriendlyMatchJpaEntity entity = friendlyMatchJpaRepository.findById(matchId)
+        FriendlyMatchJpaEntity entity = friendlyMatchJpaRepository.findByIdForUpdate(matchId)
                 .orElseThrow(FriendlyMatchNotFoundException::new);
+        // 저장 포트 직접 호출도 경기 잠금 아래 승인 기록을 다시 검사한다.
+        if (hasApprovedRequests(matchId)) {
+            throw new HostRosterLockedException();
+        }
         FriendlyMatch result = toDomain(entity);
         entity.confirmHostRoster(teamMemberIds);
         return result;
