@@ -2,6 +2,7 @@ package com.hd.gamematch.friendlymatch.adapter.in.web;
 
 import com.hd.gamematch.friendlymatch.application.exception.FriendlyMatchNotFoundException;
 import com.hd.gamematch.friendlymatch.application.exception.HostRosterAccessDeniedException;
+import com.hd.gamematch.friendlymatch.application.exception.HostRosterLockedException;
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchCommand;
 import com.hd.gamematch.friendlymatch.application.port.in.create.CreateFriendlyMatchUseCase;
 import com.hd.gamematch.friendlymatch.application.port.in.hostroster.ConfirmHostRosterCommand;
@@ -128,6 +129,22 @@ class FriendlyMatchHostRosterControllerWebMvcTest extends SecuredWebMvcTestSuppo
                 .andExpect(jsonPath("$.data.capacity").value(5));
         then(confirmHostRosterUseCase).should().confirm(CONFIRM_COMMAND);
         verifyNoInteractions(createFriendlyMatchUseCase, createMatchRequestUseCase);
+    }
+
+    // 상대 승인 후 명단 변경 충돌을 공통 409 응답으로 변환한다.
+    @Test
+    void 참가_승인_후_명단을_변경하면_409를_반환한다() throws Exception {
+        // given: 업무 계층이 첫 승인 후 명단 변경을 거부한다.
+        given(confirmHostRosterUseCase.confirm(CONFIRM_COMMAND))
+                .willThrow(new HostRosterLockedException());
+
+        // when / then: 변경할 수 없는 명단이라는 오류를 응답한다.
+        mockMvc.perform(put("/friendly-matches/100/host-roster")
+                        .header(HttpHeaders.AUTHORIZATION, bearerTokenFor(3L))
+                        .contentType(MediaType.APPLICATION_JSON).content(ROSTER_BODY))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.code").value("FRIENDLY_MATCH_002"));
     }
 
     // 인증 없는 명단 확정은 업무 로직에 도달하지 않는다.
