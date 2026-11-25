@@ -96,6 +96,11 @@ public class FriendlyMatchJpaEntity {
         hostRosterConfirmed = true;
     }
 
+    // 정원이 찼거나 상대 팀 승인이 끝나면 추가 모집을 종료한다.
+    public void closeRecruitment() {
+        state = FriendlyMatchState.RECRUITMENT_CLOSED;
+    }
+
     // FriendlyMatch 도메인 객체를 friendly_match 테이블 행으로 변환한다.
     public static FriendlyMatchJpaEntity from(FriendlyMatch friendlyMatch) {
         return new FriendlyMatchJpaEntity(
